@@ -28,11 +28,6 @@ def _get_json(filename):
         return json.load(f)
 
 
-def get_deposit_contract_json():
-    filename = os.path.join(DIR, "../eth2-deposit-contract/deposit_contract.json")
-    return _get_json(filename)
-
-
 def get_proxy_contract_json():
     filename = os.path.join(DIR, "../deposit_verifier.json")
     return _get_json(filename)
@@ -66,25 +61,21 @@ def _deploy_contract(contract_json, w3, *args):
     return contract_deployed
 
 @pytest.fixture
-def deposit_contract(w3):
-    return _deploy_contract(get_deposit_contract_json(), w3)
-
-@pytest.fixture
 def deposit_domain():
     return compute_domain(DOMAIN_DEPOSIT)
 
 
 @pytest.fixture
 def proxy_contract_deployer():
-    def _deployer(w3, deposit_contract_address, deposit_domain):
-        return _deploy_contract(get_proxy_contract_json(), w3, deposit_contract_address, deposit_domain)
+    def _deployer(w3, deposit_domain):
+        return _deploy_contract(get_proxy_contract_json(), w3, deposit_domain)
 
     return _deployer
 
 
 @pytest.fixture
-def proxy_contract(w3, deposit_contract, deposit_domain, proxy_contract_deployer):
-    return proxy_contract_deployer(w3, deposit_contract.address, deposit_domain)
+def proxy_contract(w3, deposit_domain, proxy_contract_deployer):
+    return proxy_contract_deployer(w3, deposit_domain)
 
 
 @pytest.fixture

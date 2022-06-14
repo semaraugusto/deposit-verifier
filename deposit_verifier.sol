@@ -2,8 +2,6 @@
 pragma solidity 0.6.8;
 pragma experimental ABIEncoderV2;
 
-import { IDepositContract } from "./eth2-deposit-contract/deposit_contract.sol";
-
 contract DepositVerifier  {
     uint constant PUBLIC_KEY_LENGTH = 48;
     uint constant SIGNATURE_LENGTH = 96;
@@ -43,12 +41,10 @@ contract DepositVerifier  {
         Fp2 Y;
     }
 
-    IDepositContract immutable depositContract;
     // Constant related to versioning serializations of deposits on eth2
     bytes32 immutable DEPOSIT_DOMAIN;
 
-    constructor(address depositContractAddress, bytes32 deposit_domain) public {
-        depositContract = IDepositContract(depositContractAddress);
+    constructor(bytes32 deposit_domain) public {
         DEPOSIT_DOMAIN = deposit_domain;
     }
 
@@ -406,7 +402,6 @@ contract DepositVerifier  {
         bytes calldata publicKey,
         bytes calldata withdrawalCredentials,
         bytes calldata signature,
-        bytes32 depositDataRoot,
         Fp calldata publicKeyYCoordinate,
         Fp2 calldata signatureYCoordinate
     ) external payable {
@@ -430,7 +425,5 @@ contract DepositVerifier  {
             ),
             "BLS signature verification failed"
         );
-
-        depositContract.deposit{value: msg.value}(publicKey, withdrawalCredentials, signature, depositDataRoot);
     }
 }

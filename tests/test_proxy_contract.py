@@ -1,5 +1,6 @@
 import hashlib
 import secrets
+import sys
 
 from eth_utils import to_tuple, keccak
 from py_ecc.bls.g2_primatives import pubkey_to_G1, signature_to_G2
@@ -227,40 +228,8 @@ def test_bls_signature_is_valid_fails_with_invalid_signature(
     ).call()
 
 
-def test_deposit_works(
-    deposit_contract,
-    bls_public_key,
-    withdrawal_credentials,
-    signature,
-    deposit_data_root,
-    deposit_amount,
-):
-    assert (
-        int.from_bytes(
-            deposit_contract.functions.get_deposit_count().call(), byteorder="little"
-        )
-        == 0
-    )
-    assert (
-        deposit_contract.functions.get_deposit_root().call().hex() == EMPTY_DEPOSIT_ROOT
-    )
-
-    amount_in_wei = deposit_amount * 10 ** 9
-    deposit_contract.functions.deposit(
-        bls_public_key, withdrawal_credentials, signature, deposit_data_root
-    ).transact({"value": amount_in_wei, "gas": 10 ** 6})
-
-    assert (
-        int.from_bytes(
-            deposit_contract.functions.get_deposit_count().call(), byteorder="little"
-        )
-        == 1
-    )
-
-
 def test_verify_and_deposit(
     proxy_contract,
-    deposit_contract,
     bls_public_key,
     withdrawal_credentials,
     signature,
@@ -270,16 +239,6 @@ def test_verify_and_deposit(
     deposit_amount,
     w3,
 ):
-    assert (
-        int.from_bytes(
-            deposit_contract.functions.get_deposit_count().call(), byteorder="little"
-        )
-        == 0
-    )
-    assert (
-        deposit_contract.functions.get_deposit_root().call().hex() == EMPTY_DEPOSIT_ROOT
-    )
-
     public_key_witness_repr = _convert_int_to_fp_repr(public_key_witness)
     signature_witness_repr = _convert_int_to_fp2_repr(signature_witness)
     amount_in_wei = deposit_amount * 10 ** 9
@@ -287,7 +246,6 @@ def test_verify_and_deposit(
         bls_public_key,
         withdrawal_credentials,
         signature,
-        deposit_data_root,
         public_key_witness_repr,
         signature_witness_repr,
     ).transact({"value": amount_in_wei})
@@ -295,28 +253,15 @@ def test_verify_and_deposit(
     txn_receipt = w3.eth.getTransactionReceipt(txn_hash)
     block_hash = txn_receipt.blockHash
 
-    log = deposit_contract.events.DepositEvent().getLogs()[0]
-    # sanity check
-    assert log.blockHash == block_hash
+    print(txn_receipt)
 
-    args = log.args
-    assert args.pubkey == bls_public_key
-    assert args.withdrawal_credentials == withdrawal_credentials
-    assert int.from_bytes(args.amount, byteorder="little") == deposit_amount
-    assert args.signature == signature
-    assert int.from_bytes(args.index, byteorder="little") == 0
+    print(f"\nVerification gas cost {txn_receipt['cumulativeGasUsed']}\n", file=sys.stderr)
+    # print(txn_receipt["gasUsed"], file=sys.stderr)
 
-    assert (
-        int.from_bytes(
-            deposit_contract.functions.get_deposit_count().call(), byteorder="little"
-        )
-        == 1
-    )
-
+    assert(txn_receipt["cumulativeGasUsed"] == txn_receipt["gasUsed"])
 
 def test_verify_and_deposit_fails_with_short_public_key(
     proxy_contract,
-    deposit_contract,
     bls_public_key,
     withdrawal_credentials,
     signature,
@@ -326,17 +271,6 @@ def test_verify_and_deposit_fails_with_short_public_key(
     deposit_amount,
     assert_tx_failed,
 ):
-    assert (
-        int.from_bytes(
-            deposit_contract.functions.get_deposit_count().call(), byteorder="little"
-        )
-        == 0
-    )
-
-    assert (
-        deposit_contract.functions.get_deposit_root().call().hex() == EMPTY_DEPOSIT_ROOT
-    )
-
     public_key_witness_repr = _convert_int_to_fp_repr(public_key_witness)
     signature_witness_repr = _convert_int_to_fp2_repr(signature_witness)
     amount_in_wei = deposit_amount * 10 ** 9
@@ -344,23 +278,13 @@ def test_verify_and_deposit_fails_with_short_public_key(
         bls_public_key[1:],
         withdrawal_credentials,
         signature,
-        deposit_data_root,
         public_key_witness_repr,
         signature_witness_repr,
     )
     assert_tx_failed(lambda: txn.transact({"value": amount_in_wei}))
 
-    assert (
-        int.from_bytes(
-            deposit_contract.functions.get_deposit_count().call(), byteorder="little"
-        )
-        == 0
-    )
-
-
 def test_verify_and_deposit_fails_with_short_signature(
     proxy_contract,
-    deposit_contract,
     bls_public_key,
     withdrawal_credentials,
     signature,
@@ -370,16 +294,6 @@ def test_verify_and_deposit_fails_with_short_signature(
     deposit_amount,
     assert_tx_failed,
 ):
-    assert (
-        int.from_bytes(
-            deposit_contract.functions.get_deposit_count().call(), byteorder="little"
-        )
-        == 0
-    )
-    assert (
-        deposit_contract.functions.get_deposit_root().call().hex() == EMPTY_DEPOSIT_ROOT
-    )
-
     public_key_witness_repr = _convert_int_to_fp_repr(public_key_witness)
     signature_witness_repr = _convert_int_to_fp2_repr(signature_witness)
     amount_in_wei = deposit_amount * 10 ** 9
@@ -387,23 +301,13 @@ def test_verify_and_deposit_fails_with_short_signature(
         bls_public_key,
         withdrawal_credentials,
         signature[1:],
-        deposit_data_root,
         public_key_witness_repr,
         signature_witness_repr,
     )
     assert_tx_failed(lambda: txn.transact({"value": amount_in_wei}))
 
-    assert (
-        int.from_bytes(
-            deposit_contract.functions.get_deposit_count().call(), byteorder="little"
-        )
-        == 0
-    )
-
-
 def test_verify_and_deposit_fails_with_incorrect_message_via_withdrawal_credentials(
     proxy_contract,
-    deposit_contract,
     bls_public_key,
     withdrawal_credentials,
     signature,
@@ -413,16 +317,6 @@ def test_verify_and_deposit_fails_with_incorrect_message_via_withdrawal_credenti
     deposit_amount,
     assert_tx_failed,
 ):
-    assert (
-        int.from_bytes(
-            deposit_contract.functions.get_deposit_count().call(), byteorder="little"
-        )
-        == 0
-    )
-    assert (
-        deposit_contract.functions.get_deposit_root().call().hex() == EMPTY_DEPOSIT_ROOT
-    )
-
     public_key_witness_repr = _convert_int_to_fp_repr(public_key_witness)
     signature_witness_repr = _convert_int_to_fp2_repr(signature_witness)
     amount_in_wei = deposit_amount * 10 ** 9
@@ -432,23 +326,13 @@ def test_verify_and_deposit_fails_with_incorrect_message_via_withdrawal_credenti
         bls_public_key,
         withdrawal_credentials[1:],
         signature,
-        deposit_data_root,
         public_key_witness_repr,
         signature_witness_repr,
     )
     assert_tx_failed(lambda: txn.transact({"value": amount_in_wei}))
 
-    assert (
-        int.from_bytes(
-            deposit_contract.functions.get_deposit_count().call(), byteorder="little"
-        )
-        == 0
-    )
-
-
 def test_verify_and_deposit_fails_with_incorrect_message_via_msg_value(
     proxy_contract,
-    deposit_contract,
     bls_public_key,
     withdrawal_credentials,
     signature,
@@ -458,16 +342,6 @@ def test_verify_and_deposit_fails_with_incorrect_message_via_msg_value(
     deposit_amount,
     assert_tx_failed,
 ):
-    assert (
-        int.from_bytes(
-            deposit_contract.functions.get_deposit_count().call(), byteorder="little"
-        )
-        == 0
-    )
-    assert (
-        deposit_contract.functions.get_deposit_root().call().hex() == EMPTY_DEPOSIT_ROOT
-    )
-
     public_key_witness_repr = _convert_int_to_fp_repr(public_key_witness)
     signature_witness_repr = _convert_int_to_fp2_repr(signature_witness)
     amount_in_wei = deposit_amount * 10 ** 9
@@ -475,7 +349,6 @@ def test_verify_and_deposit_fails_with_incorrect_message_via_msg_value(
         bls_public_key,
         withdrawal_credentials,
         signature,
-        deposit_data_root,
         public_key_witness_repr,
         signature_witness_repr,
     )
@@ -483,17 +356,8 @@ def test_verify_and_deposit_fails_with_incorrect_message_via_msg_value(
     # public key and signature
     assert_tx_failed(lambda: txn.transact({"value": amount_in_wei - 1}))
 
-    assert (
-        int.from_bytes(
-            deposit_contract.functions.get_deposit_count().call(), byteorder="little"
-        )
-        == 0
-    )
-
-
 def test_verify_and_deposit_fails_with_incorrect_public_key(
     proxy_contract,
-    deposit_contract,
     withdrawal_credentials,
     signature,
     deposit_data_root,
@@ -503,16 +367,6 @@ def test_verify_and_deposit_fails_with_incorrect_public_key(
     assert_tx_failed,
     seed,
 ):
-    assert (
-        int.from_bytes(
-            deposit_contract.functions.get_deposit_count().call(), byteorder="little"
-        )
-        == 0
-    )
-    assert (
-        deposit_contract.functions.get_deposit_root().call().hex() == EMPTY_DEPOSIT_ROOT
-    )
-
     another_seed = "another-secret".encode()
     assert seed != another_seed
     another_private_key = G2ProofOfPossession.KeyGen(another_seed)
@@ -528,23 +382,13 @@ def test_verify_and_deposit_fails_with_incorrect_public_key(
         public_key,
         withdrawal_credentials,
         signature,
-        deposit_data_root,
         public_key_witness_repr,
         signature_witness_repr,
     )
     assert_tx_failed(lambda: txn.transact({"value": amount_in_wei}))
 
-    assert (
-        int.from_bytes(
-            deposit_contract.functions.get_deposit_count().call(), byteorder="little"
-        )
-        == 0
-    )
-
-
 def test_verify_and_deposit_fails_with_incorrect_signature(
     proxy_contract,
-    deposit_contract,
     bls_public_key,
     withdrawal_credentials,
     signature,
@@ -556,16 +400,6 @@ def test_verify_and_deposit_fails_with_incorrect_signature(
     signing_root,
     bls_private_key,
 ):
-    assert (
-        int.from_bytes(
-            deposit_contract.functions.get_deposit_count().call(), byteorder="little"
-        )
-        == 0
-    )
-    assert (
-        deposit_contract.functions.get_deposit_root().call().hex() == EMPTY_DEPOSIT_ROOT
-    )
-
     public_key_witness_repr = _convert_int_to_fp_repr(public_key_witness)
 
     another_message = hashlib.sha256(b"not the signing root").digest()
@@ -581,111 +415,7 @@ def test_verify_and_deposit_fails_with_incorrect_signature(
         bls_public_key,
         withdrawal_credentials,
         signature,
-        deposit_data_root,
         public_key_witness_repr,
         signature_witness_repr,
     )
     assert_tx_failed(lambda: txn.transact({"value": amount_in_wei}))
-
-    assert (
-        int.from_bytes(
-            deposit_contract.functions.get_deposit_count().call(), byteorder="little"
-        )
-        == 0
-    )
-
-
-def test_verify_and_deposit_fails_with_incorrect_deposit_data_root(
-    proxy_contract,
-    deposit_contract,
-    bls_public_key,
-    withdrawal_credentials,
-    signature,
-    deposit_data_root,
-    public_key_witness,
-    signature_witness,
-    deposit_amount,
-    assert_tx_failed,
-):
-    assert (
-        int.from_bytes(
-            deposit_contract.functions.get_deposit_count().call(), byteorder="little"
-        )
-        == 0
-    )
-
-    assert (
-        deposit_contract.functions.get_deposit_root().call().hex() == EMPTY_DEPOSIT_ROOT
-    )
-
-    public_key_witness_repr = _convert_int_to_fp_repr(public_key_witness)
-    signature_witness_repr = _convert_int_to_fp2_repr(signature_witness)
-    amount_in_wei = deposit_amount * 10 ** 9
-    random_bytes = secrets.token_bytes(32)
-    assert random_bytes != deposit_data_root
-    txn = proxy_contract.functions.verifyAndDeposit(
-        bls_public_key,
-        withdrawal_credentials,
-        signature,
-        random_bytes,
-        public_key_witness_repr,
-        signature_witness_repr,
-    )
-    assert_tx_failed(lambda: txn.transact({"value": amount_in_wei}))
-
-    assert (
-        int.from_bytes(
-            deposit_contract.functions.get_deposit_count().call(), byteorder="little"
-        )
-        == 0
-    )
-
-
-def test_verify_and_deposit_fails_with_differing_deposit_domain(
-    proxy_contract_deployer,
-    w3,
-    deposit_domain,
-    deposit_contract,
-    bls_public_key,
-    withdrawal_credentials,
-    signature,
-    deposit_data_root,
-    public_key_witness,
-    signature_witness,
-    deposit_amount,
-    assert_tx_failed,
-):
-    assert (
-        int.from_bytes(
-            deposit_contract.functions.get_deposit_count().call(), byteorder="little"
-        )
-        == 0
-    )
-
-    assert (
-        deposit_contract.functions.get_deposit_root().call().hex() == EMPTY_DEPOSIT_ROOT
-    )
-
-    some_other_deposit_domain = b"\x99" + deposit_domain[1:]
-    assert deposit_domain != some_other_deposit_domain
-    proxy_contract = proxy_contract_deployer(w3, deposit_contract.address, some_other_deposit_domain)
-
-    public_key_witness_repr = _convert_int_to_fp_repr(public_key_witness)
-    signature_witness_repr = _convert_int_to_fp2_repr(signature_witness)
-    amount_in_wei = deposit_amount * 10 ** 9
-    txn = proxy_contract.functions.verifyAndDeposit(
-        bls_public_key,
-        withdrawal_credentials,
-        signature,
-        deposit_data_root,
-        public_key_witness_repr,
-        signature_witness_repr,
-    )
-    assert_tx_failed(lambda: txn.transact({"value": amount_in_wei}))
-
-    assert (
-        int.from_bytes(
-            deposit_contract.functions.get_deposit_count().call(), byteorder="little"
-        )
-        == 0
-    )
