@@ -1,6 +1,7 @@
 import hashlib
 import json
 import os
+import sys
 
 import eth_tester
 import pytest
@@ -47,7 +48,6 @@ def tester(berlin_vm_configuration):
 def w3(tester):
     web3 = Web3(EthereumTesterProvider(tester))
     return web3
-
 
 def _deploy_contract(contract_json, w3, *args):
     contract_bytecode = contract_json["bytecode"]
@@ -129,6 +129,7 @@ def deposit_message(bls_public_key, withdrawal_credentials, deposit_amount):
 @pytest.fixture
 def signing_root(deposit_message, deposit_domain):
     return compute_signing_root(deposit_message, deposit_domain)
+    # return result
 
 
 @pytest.fixture

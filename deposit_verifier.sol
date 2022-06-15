@@ -41,8 +41,22 @@ contract DepositVerifier  {
         Fp2 Y;
     }
 
+    // uint constant BLS12_381_BASE_FIELD_MODULUS = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab;
+
+    // uint constant BLS12_381_FP_QR_RES = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaaa;
+    //
+    // uint constant BLS12_381_G1_X = 0x17f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb;
+    // uint constant BLS12_381_G1_Y = 0x08b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e1;
+    //
+    // uint constant BLS12_381_G2_P1_X = 0x024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb8;
+    // uint constant BLS12_381_G2_P1_Y = 0x0ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801;
+    // uint constant BLS12_381_G2_P2_X = 0x13e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e;
+    // uint constant BLS12_381_G2_P2_Y = 0x0606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be;
+    //
     // Constant related to versioning serializations of deposits on eth2
     bytes32 immutable DEPOSIT_DOMAIN;
+
+    uint256 MAX_U256 = 2**256-1;
 
     constructor(bytes32 deposit_domain) public {
         DEPOSIT_DOMAIN = deposit_domain;
@@ -192,7 +206,7 @@ contract DepositVerifier  {
         return result;
     }
 
-    function convertSliceToFp(bytes memory data, uint start, uint end) private view returns (Fp memory) {
+    function convertSliceToFp(bytes memory data, uint start, uint end) private view returns (Fp memory result) {
         bytes memory fieldElement = reduceModulo(data, start, end);
         uint a = sliceToUint(fieldElement, 0, 16);
         uint b = sliceToUint(fieldElement, 16, 48);
@@ -211,6 +225,43 @@ contract DepositVerifier  {
             convertSliceToFp(some_bytes, 192, 256)
         );
     }
+
+    function mapToCurveNoPrecompile(Fp2 memory fieldElement) public view returns (G2Point memory result) {
+        uint[4] memory input;
+        input[0] = fieldElement.a.a;
+        input[1] = fieldElement.a.b;
+        input[2] = fieldElement.b.a;
+        input[3] = fieldElement.b.b;
+
+        uint[8] memory output;
+
+        bool success;
+        assembly {
+            success := staticcall(
+                sub(gas(), 2000),
+                BLS12_381_MAP_FIELD_TO_CURVE_PRECOMPILE_ADDRESS,
+                input,
+                128,
+                output,
+                256
+            )
+            // Use "invalid" to make gas estimation work
+            switch success case 0 { invalid() }
+        }
+        require(success, "call to map to curve precompile failed");
+
+        return G2Point(
+            Fp2(
+                Fp(output[0], output[1]),
+                Fp(output[2], output[3])
+            ),
+            Fp2(
+                Fp(output[4], output[5]),
+                Fp(output[6], output[7])
+            )
+        );
+    }
+
 
     function mapToCurve(Fp2 memory fieldElement) public view returns (G2Point memory result) {
         uint[4] memory input;
@@ -235,6 +286,103 @@ contract DepositVerifier  {
             switch success case 0 { invalid() }
         }
         require(success, "call to map to curve precompile failed");
+
+        return G2Point(
+            Fp2(
+                Fp(output[0], output[1]),
+                Fp(output[2], output[3])), Fp2( Fp(output[4], output[5]), Fp(output[6], output[7]))
+        );
+    }
+
+    function G2_isZeroNoPrecompile(Fp2 memory x, Fp2 memory y) public pure returns (bool) {
+        return((x.a.a | x.a.b | x.b.a | x.b.b | y.a.a | y.a.b | y.b.a | y.b.b) == 0);
+    }
+
+    function lmul(uint xa, uint xb, uint ya, uint yb) public pure returns (Fp memory result) {
+        uint r0;
+        uint r1;
+        uint r1_carry;
+        uint r2;
+        assembly {
+            let rem_b := mulmod(xb, yb, not(0))
+            r0 := mul(xb, yb)
+            r1_carry := sub(sub(rem_b, r0), lt(rem_b, r0))
+
+            let rem := mulmod(xa, ya, not(0))
+            r1 := mul(xa, ya)
+            r2 := sub(sub(rem, r1), lt(rem, r1))
+
+            r1 := add(r1, r1_carry)
+        }
+        return Fp(r1, r0);
+    }
+
+    function ladd(uint xa, uint xb, uint ya, uint yb) public pure returns (Fp memory) {
+        uint r0_b;
+        uint r0;
+        uint r1;
+        uint carry_b;
+        assembly {
+            let rem_b := addmod(xb, yb, not(0))
+            r0_b := add(xb, yb)
+            carry_b := sub(sub(rem_b, r0_b), lt(rem_b, r0_b))
+
+            // a wont overflow as its relatively small
+            let rem := addmod(xa, ya, not(0))
+            r0 := add(xa, ya)
+            r1 := sub(sub(rem, r0), lt(rem, r0))
+
+            r1 := add(r1, carry_b)
+            // r1 := add(xa, ya)
+            // r1 := add(r1, carry)
+        }
+        return Fp(r1, r0);
+    }
+
+    function addG2NoPrecompile(G2Point memory a, G2Point memory b) public view returns (G2Point memory) {
+        if(G2_isZeroNoPrecompile(a.X, a.Y)) {
+            return b;
+        }
+
+        if (G2_isZeroNoPrecompile(b.X, b.Y)) {
+            return a;
+        }
+
+        uint[16] memory input;
+        input[0]  = a.X.a.a;
+        input[1]  = a.X.a.b;
+        input[2]  = a.X.b.a;
+        input[3]  = a.X.b.b;
+        input[4]  = a.Y.a.a;
+        input[5]  = a.Y.a.b;
+        input[6]  = a.Y.b.a;
+        input[7]  = a.Y.b.b;
+
+        input[8]  = b.X.a.a;
+        input[9]  = b.X.a.b;
+        input[10] = b.X.b.a;
+        input[11] = b.X.b.b;
+        input[12] = b.Y.a.a;
+        input[13] = b.Y.a.b;
+        input[14] = b.Y.b.a;
+        input[15] = b.Y.b.b;
+
+        uint[8] memory output;
+
+        bool success;
+        assembly {
+            success := staticcall(
+                sub(gas(), 2000),
+                BLS12_381_G2_ADD_ADDRESS,
+                input,
+                512,
+                output,
+                256
+            )
+            // Use "invalid" to make gas estimation work
+            switch success case 0 { invalid() }
+        }
+        require(success, "call to addition in G2 precompile failed");
 
         return G2Point(
             Fp2(
@@ -297,6 +445,14 @@ contract DepositVerifier  {
         );
     }
 
+    // Implements "hash to the curve" from the IETF BLS draft.
+    // NOTE: function is exposed for testing...
+    function hashToCurveNoPrecompile(bytes32 message) public view returns (G2Point memory) {
+        Fp2[2] memory messageElementsInField = hashToField(message);
+        G2Point memory firstPoint = mapToCurve(messageElementsInField[0]);
+        G2Point memory secondPoint = mapToCurve(messageElementsInField[1]);
+        return addG2NoPrecompile(firstPoint, secondPoint);
+    }
     // Implements "hash to the curve" from the IETF BLS draft.
     // NOTE: function is exposed for testing...
     function hashToCurve(bytes32 message) public view returns (G2Point memory) {
@@ -396,34 +552,5 @@ contract DepositVerifier  {
         G2Point memory messageOnCurve = hashToCurve(message);
 
         return blsPairingCheck(publicKey, messageOnCurve, signature);
-    }
-
-    function verifyAndDeposit(
-        bytes calldata publicKey,
-        bytes calldata withdrawalCredentials,
-        bytes calldata signature,
-        Fp calldata publicKeyYCoordinate,
-        Fp2 calldata signatureYCoordinate
-    ) external payable {
-        require(publicKey.length == PUBLIC_KEY_LENGTH, "incorrectly sized public key");
-        require(withdrawalCredentials.length == WITHDRAWAL_CREDENTIALS_LENGTH, "incorrectly sized withdrawal credentials");
-        require(signature.length == SIGNATURE_LENGTH, "incorrectly sized signature");
-
-        bytes32 signingRoot = computeSigningRoot(
-            publicKey,
-            withdrawalCredentials,
-            msg.value
-        );
-
-        require(
-            blsSignatureIsValid(
-                signingRoot,
-                publicKey,
-                signature,
-                publicKeyYCoordinate,
-                signatureYCoordinate
-            ),
-            "BLS signature verification failed"
-        );
     }
 }
