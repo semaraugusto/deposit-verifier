@@ -302,16 +302,18 @@ contract DepositVerifier  {
         uint r0;
         uint r1;
         uint r1_carry;
-        uint r2;
+        uint r2_carry;
         assembly {
+            // multiply least significant bits
             let rem_b := mulmod(xb, yb, not(0))
             r0 := mul(xb, yb)
             r1_carry := sub(sub(rem_b, r0), lt(rem_b, r0))
 
+            // multiply more significant bits
             let rem := mulmod(xa, ya, not(0))
             r1 := mul(xa, ya)
-            r2 := sub(sub(rem, r1), lt(rem, r1))
-
+            r2_carry := sub(sub(rem, r1), lt(rem, r1))
+            // what to do with this r2_carry? Need to mod with prime base field?
             r1 := add(r1, r1_carry)
         }
         return Fp(r1, r0);
@@ -323,18 +325,18 @@ contract DepositVerifier  {
         uint r1;
         uint carry_b;
         assembly {
+            // add least significant bits
             let rem_b := addmod(xb, yb, not(0))
             r0_b := add(xb, yb)
             carry_b := sub(sub(rem_b, r0_b), lt(rem_b, r0_b))
 
-            // a wont overflow as its relatively small
+            // add more significant bits
             let rem := addmod(xa, ya, not(0))
             r0 := add(xa, ya)
             r1 := sub(sub(rem, r0), lt(rem, r0))
 
+            // add carry
             r1 := add(r1, carry_b)
-            // r1 := add(xa, ya)
-            // r1 := add(r1, carry)
         }
         return Fp(r1, r0);
     }
