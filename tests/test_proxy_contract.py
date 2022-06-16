@@ -3,6 +3,7 @@ import secrets
 import sys
 
 from eth_utils import to_tuple, keccak
+from py_ecc.fields import FQ
 from py_ecc.bls.g2_primatives import pubkey_to_G1, signature_to_G2
 from py_ecc.bls.hash import expand_message_xmd
 from py_ecc.bls.hash_to_curve import (
@@ -78,60 +79,83 @@ def test_hash_to_field_matches_spec(proxy_contract, signing_root, dst):
 
     assert converted_result == spec_result
 
-def test_lmul(proxy_contract, signing_root, dst):
-    result = proxy_contract.functions.hashToField(signing_root).call()
-    print(result)
+# def test_lmul(proxy_contract, signing_root):
+#     result = proxy_contract.functions.hashToField(signing_root).call()
+#     print(result)
+#
+#     fp_a, fp_b = result[0]
+#     expected = fp_a * fp_b
+#     print(f"expected: {expected}")
+#
+#     aa, ab = fp_a
+#
+#     ba, bb = fp_b
+#     print(f"fpa: {fp_a}")
+#     print(f"fpb: {fp_b}")
+#     actual = proxy_contract.functions.lmul(aa, ab, ba, bb).call()
+#
+#     print(f"actual: {actual}")
+#     # print(f"actual: {_convert_fp_to_int(actual)}")
+#
+#     # print(converted_result)
+#
+#     assert expected == actual
 
-    fp_a, fp_b = result[0]
-    expected = fp_a * fp_b
+def test_ladd_small(proxy_contract):
+    FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
+    fp_a, fp_b = FQ(1), FQ(2)
+    expected = FQ(3)
     print(f"expected: {expected}")
+    print(f"expected: {type(expected)}")
 
-    aa, ab = fp_a
-
-    ba, bb = fp_b
+    # aa, ab = fp_a
+    # ba, bb = fp_b
     print(f"fpa: {fp_a}")
+    print(f"typeof fpa: {type(fp_a)}")
     print(f"fpb: {fp_b}")
-    actual = proxy_contract.functions.lmul(aa, ab, ba, bb).call()
-
-    print(f"actual: {actual}")
-    # print(f"actual: {_convert_fp_to_int(actual)}")
-
-    # print(converted_result)
-
-    assert expected == actual
-
-def test_ladd(proxy_contract, signing_root, dst):
-    result = proxy_contract.functions.hashToField(signing_root).call()
-    print(result)
-    # converted_result = tuple(_convert_fp2_to_int(fp2_repr) for fp2_repr in result)
-
-    # spec_result = hash_to_field_FQ2(signing_root, 2, dst, hashlib.sha256)
-
-    fp_a, fp_b = result[0]
-    expected = fp_a + fp_b
-    # expected = _convert_int_to_fp_repr(expected)
-    print(f"expected: {expected}")
-    # print(f"expected: {_convert_fp_to_int(expected)}")
-
-    aa, ab = fp_a
-    # aa_bytes = a_a.to_bytes(16, byteorder="big")
-    # ab_bytes = a_b.to_bytes(32, byteorder="big")
-
-    ba, bb = fp_b
-    # ba_bytes = b_a.to_bytes(16, byteorder="big")
-    # bb_bytes = b_b.to_bytes(32, byteorder="big")
-    print(f"fpa: {fp_a}")
-    print(f"fpb: {fp_b}")
-    # print(f"expected: {_convert_fp_to_int(expected)}")
-    actual = proxy_contract.functions.ladd(aa, ab, ba, bb).call()
+    print(f"typeof fpa: {type(fp_b)}")
+    fp_a_repr = _convert_int_to_fp_repr(fp_a)
+    fp_b_repr = _convert_int_to_fp_repr(fp_b)
+    actual = proxy_contract.functions.ladd(fp_a_repr, fp_b_repr).call()
 
     print(f"actual: {actual}")
     print(f"actual: {_convert_fp_to_int(actual)}")
+    print(f"expected: {type(actual)}")
 
-    # print(converted_result)
+    assert expected == _convert_fp_to_int(actual)
+
+def test_ladd(proxy_contract):
+    FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
+    fp_a, fp_b = FQ(1), FQ(2)
+    expected = FQ(3)
+    print(f"expected: {expected}")
+    print(f"expected: {type(expected)}")
+
+    # aa, ab = fp_a
+    # ba, bb = fp_b
+    print(f"fpa: {fp_a}")
+    print(f"typeof fpa: {type(fp_a)}")
+    print(f"fpb: {fp_b}")
+    print(f"typeof fpa: {type(fp_b)}")
+    fp_a_repr = _convert_int_to_fp_repr(fp_a)
+    fp_b_repr = _convert_int_to_fp_repr(fp_b)
+    actual = proxy_contract.functions.ladd(fp_a_repr, fp_b_repr).call()
+
+    print(f"actual: {actual}")
+    print(f"actual: {_convert_fp_to_int(actual)}")
+    print(f"expected: {type(actual)}")
+
+    assert expected == _convert_fp_to_int(actual)
+
+def test_add():
+    FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
+    fp_a, fp_b = FQ(1), FQ(2)
+    expected = FQ(3)
+    actual = fp_a + fp_b
+    print(f"expected: {expected}")
+    print(f"expected: {type(expected)}")
 
     assert expected == actual
-
 
 def test_map_to_curve_matches_spec(proxy_contract, signing_root):
     field_elements_parts = proxy_contract.functions.hashToField(signing_root).call()

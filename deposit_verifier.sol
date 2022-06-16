@@ -16,6 +16,7 @@ contract DepositVerifier  {
 
     uint8 constant MOD_EXP_PRECOMPILE_ADDRESS = 0x5;
 
+    event Add(uint r0, uint r1);
     // Fp is a field element with the high-order part stored in `a`.
     struct Fp {
         uint a;
@@ -319,11 +320,16 @@ contract DepositVerifier  {
         return Fp(r1, r0);
     }
 
-    function ladd(uint xa, uint xb, uint ya, uint yb) public pure returns (Fp memory) {
+    // function ladd(uint xa, uint xb, uint ya, uint yb) public pure returns (Fp memory) {
+    function ladd(Fp memory x, Fp memory y) public pure returns (Fp memory) {
         uint r0_b;
         uint r0;
         uint r1;
         uint carry_b;
+        uint xb = x.b;
+        uint xa = x.a;
+        uint yb = y.b;
+        uint ya = y.a;
         assembly {
             // add least significant bits
             let rem_b := addmod(xb, yb, not(0))
@@ -338,9 +344,10 @@ contract DepositVerifier  {
             // add carry
             r1 := add(r1, carry_b)
         }
-        return Fp(r1, r0);
+        return Fp(r1, r0_b);
     }
 
+    // This function is being used for testing purposes. 
     function addG2NoPrecompile(G2Point memory a, G2Point memory b) public view returns (G2Point memory) {
         if(G2_isZeroNoPrecompile(a.X, a.Y)) {
             return b;
