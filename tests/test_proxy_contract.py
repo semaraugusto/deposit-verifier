@@ -16,7 +16,7 @@ from py_ecc.bls import G2ProofOfPossession
 from py_ecc.optimized_bls12_381 import FQ2, normalize
 
 EMPTY_DEPOSIT_ROOT = "d70a234731285c6804c2a4f56711ddb8c82c99740f207854891028af34e27e5e"
-
+UINT_MAX = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 
 def test_compute_signing_root_matches_spec(
     proxy_contract, bls_public_key, withdrawal_credentials, deposit_amount, signing_root
@@ -100,11 +100,35 @@ def test_hash_to_field_matches_spec(proxy_contract, signing_root, dst):
 #     # print(converted_result)
 #
 #     assert expected == actual
-
-def test_ladd_small(proxy_contract):
+def test_ladd_big(proxy_contract):
     FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
-    fp_a, fp_b = FQ(1), FQ(2)
-    expected = FQ(3)
+    fp_a, fp_b = FQ(100), FQ(FQ.field_modulus-1)
+    actual = FQ(fp_a + fp_b)
+    expected = FQ(99)
+    print(f"expected: {expected}")
+    print(f"expected: {type(expected)}")
+
+    # aa, ab = fp_a
+    # ba, bb = fp_b
+    print(f"fpa: {fp_a}")
+    print(f"typeof fpa: {type(fp_a)}")
+    print(f"fpb: {fp_b}")
+    print(f"typeof fpa: {type(fp_b)}")
+    assert expected == actual
+    fp_a_repr = _convert_int_to_fp_repr(fp_a)
+    fp_b_repr = _convert_int_to_fp_repr(fp_b)
+    actual = proxy_contract.functions.ladd(fp_a_repr, fp_b_repr).call()
+
+    print(f"actual: {actual}")
+    print(f"actual: {_convert_fp_to_int(actual)}")
+    print(f"expected: {type(actual)}")
+
+    assert expected == _convert_fp_to_int(actual)
+
+def test_ladd_medium(proxy_contract):
+    FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
+    fp_a, fp_b = FQ(UINT_MAX), FQ(UINT_MAX)
+    expected = FQ(UINT_MAX * 2)
     print(f"expected: {expected}")
     print(f"expected: {type(expected)}")
 
@@ -124,7 +148,7 @@ def test_ladd_small(proxy_contract):
 
     assert expected == _convert_fp_to_int(actual)
 
-def test_ladd(proxy_contract):
+def test_ladd_small(proxy_contract):
     FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
     fp_a, fp_b = FQ(1), FQ(2)
     expected = FQ(3)
