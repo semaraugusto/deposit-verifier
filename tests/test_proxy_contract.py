@@ -4,7 +4,7 @@ import sys
 
 import pytest
 from eth_utils import to_tuple, keccak
-from py_ecc.fields import FQ
+from py_ecc.fields import FQ, FQ2
 from py_ecc.bls.g2_primatives import pubkey_to_G1, signature_to_G2
 from py_ecc.bls.hash import expand_message_xmd
 from py_ecc.bls.hash_to_curve import (
@@ -109,9 +109,6 @@ def test_base_field(proxy_contract):
 
     assert expected == _convert_fp_to_int(actual)
 
-
-
-
 def test_div_small(proxy_contract):
     FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
     fp_a, fp_b = FQ(10), 2
@@ -194,6 +191,34 @@ def test_lmul_big(proxy_contract):
     print(f"expected: {type(actual)}")
 
     assert expected == _convert_fp_to_int(actual)
+
+def test_ladd_fq2(proxy_contract):
+    FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
+    fp_a, fp_b = FQ2([FQ(1), FQ(1)]), FQ2([FQ(2), FQ(2)])
+    expected = (FQ(3), FQ(3))
+    print(f"expected: {expected}")
+    print(f"expected: {type(expected)}")
+
+    # aa, ab = fp_a
+    # ba, bb = fp_b
+    print(f"fpa: {fp_a}")
+    print(f"typeof fpa: {type(fp_a)}")
+    print(f"fpb: {fp_b}")
+    print(f"typeof fpa: {type(fp_b)}")
+    fp_a_repr = _convert_int_to_fp2_repr(fp_a)
+    fp_b_repr = _convert_int_to_fp2_repr(fp_b)
+    actual = proxy_contract.functions.ladd(fp_a_repr, fp_b_repr).call()
+    print(f"actual: {actual}")
+    actual = tuple(_convert_fp_to_int(fp2_repr) for fp2_repr in actual)
+    # expected = tuple(_convert_fp2_to_int(fp2_repr) for fp2_repr in expected)
+    # actual_a, actual_b = actual
+    # expected_a, expected_b = expected
+
+    # print(f"actual: {_convert_fp_to_int(actual)}")
+    # print(f"expected: {type(actual)}")
+
+    assert expected == actual
+
 
 def test_ladd_big(proxy_contract):
     FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
@@ -395,6 +420,7 @@ def test_hash_to_curve_matches_spec(proxy_contract, signing_root, dst):
 
     assert converted_result == spec_result
 
+@pytest.mark.skip(reason="no way of currently testing this")
 def test_hash_to_curve_no_precompile_matches_spec(proxy_contract, signing_root, dst):
     result = proxy_contract.functions.hashToCurveNoPrecompile(signing_root).call()
     converted_result = tuple(_convert_fp2_to_int(fp2_repr) for fp2_repr in result)

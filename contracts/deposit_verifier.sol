@@ -328,8 +328,13 @@ contract DepositVerifier  {
             // what to do with this r2_carry? Need to mod with prime base field?
             r1 := add(r1, r1_carry)
         }
-        require(r2_carry == 0, "overflow");
-        return Fp(r1, r0);
+        result = Fp(r1, r0);
+        Fp memory base_field = get_base_field();
+        if (lgte(result, base_field)) {
+            return lmod(result, base_field);
+        }
+        return result;
+        /* return Fp(r1, r0); */
     }
 
     function get_base_field() public pure returns (Fp memory) {
@@ -403,6 +408,12 @@ contract DepositVerifier  {
         return p;
     }
 
+    function lsub(Fp2 memory x, Fp2 memory y) public pure returns (Fp2 memory) {
+        Fp memory a = lsub(x.a, y.a);
+        Fp memory b = lsub(x.b, y.b);
+        return Fp2(a, b);
+    }
+
     function lsub(Fp memory x, Fp memory y) public pure returns (Fp memory) {
         uint r0;
         uint r1;
@@ -474,63 +485,31 @@ contract DepositVerifier  {
         return result;
         /* return lmod(result, get_base_field()); */
     }
-    
+
+    function ladd(Fp2 memory x, Fp2 memory y) public pure returns (Fp2 memory) {
+        Fp memory a = ladd(x.a, y.a);
+        Fp memory b = ladd(x.b, y.b);
+        return Fp2(a, b);
+    }
+
+    function ldouble(Fp memory x) public pure returns (Fp memory) {
+        return ladd(x, x);
+    }
+
+    function ldouble(Fp2 memory x) public pure returns (Fp2 memory) {
+         Fp memory a = ldouble(x.a);
+         Fp memory b = ldouble(x.b);
+         return Fp2(a, b);
+    }
+
     // This function is being used for testing purposes. 
-    function addG2NoPrecompile(G2Point memory a, G2Point memory b) public view returns (G2Point memory) {
-        if(G2_isZeroNoPrecompile(a.X, a.Y)) {
-            return b;
-        }
+    function addG2NoPrecompile(G2Point memory a, G2Point memory b) public pure returns (G2Point memory) {
+        if(G2_isZeroNoPrecompile(a.X, a.Y)) { return b; }
+        if (G2_isZeroNoPrecompile(b.X, b.Y)) { return a; }
+        Fp2 memory X = ladd(a.X, b.X);
+        Fp2 memory Y = ladd(a.Y, b.Y);
 
-        if (G2_isZeroNoPrecompile(b.X, b.Y)) {
-            return a;
-        }
-
-        uint[16] memory input;
-        input[0]  = a.X.a.a;
-        input[1]  = a.X.a.b;
-        input[2]  = a.X.b.a;
-        input[3]  = a.X.b.b;
-        input[4]  = a.Y.a.a;
-        input[5]  = a.Y.a.b;
-        input[6]  = a.Y.b.a;
-        input[7]  = a.Y.b.b;
-
-        input[8]  = b.X.a.a;
-        input[9]  = b.X.a.b;
-        input[10] = b.X.b.a;
-        input[11] = b.X.b.b;
-        input[12] = b.Y.a.a;
-        input[13] = b.Y.a.b;
-        input[14] = b.Y.b.a;
-        input[15] = b.Y.b.b;
-
-        uint[8] memory output;
-
-        bool success;
-        assembly {
-            success := staticcall(
-                sub(gas(), 2000),
-                BLS12_381_G2_ADD_ADDRESS,
-                input,
-                512,
-                output,
-                256
-            )
-            // Use "invalid" to make gas estimation work
-            switch success case 0 { invalid() }
-        }
-        require(success, "call to addition in G2 precompile failed");
-
-        return G2Point(
-            Fp2(
-                Fp(output[0], output[1]),
-                Fp(output[2], output[3])
-            ),
-            Fp2(
-                Fp(output[4], output[5]),
-                Fp(output[6], output[7])
-            )
-        );
+        return G2Point(X, Y);
     }
 
     function addG2(G2Point memory a, G2Point memory b) private view returns (G2Point memory) {
