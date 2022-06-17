@@ -307,11 +307,15 @@ contract DepositVerifier  {
         return((x.a.a | x.a.b | x.b.a | x.b.b | y.a.a | y.a.b | y.b.a | y.b.b) == 0);
     }
 
-    function lmul(uint xa, uint xb, uint ya, uint yb) public pure returns (Fp memory result) {
+    function lmul(Fp memory x, Fp memory y) public pure returns (Fp memory result) {
         uint r0;
         uint r1;
         uint r1_carry;
         uint r2_carry;
+        uint xb = x.b;
+        uint xa = x.a;
+        uint yb = y.b;
+        uint ya = y.a;
         assembly {
             // multiply least significant bits
             let rem_b := mulmod(xb, yb, not(0))
@@ -325,6 +329,7 @@ contract DepositVerifier  {
             // what to do with this r2_carry? Need to mod with prime base field?
             r1 := add(r1, r1_carry)
         }
+        require(r2_carry == 0, "overflow");
         return Fp(r1, r0);
     }
 
