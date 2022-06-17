@@ -19,7 +19,6 @@ contract DepositVerifier  {
     uint8 constant BLS12_381_G2_ADD_ADDRESS = 0xD;
     string constant BLS_SIG_DST = "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_+";
     bytes1 constant BLS_BYTE_WITHOUT_FLAGS_MASK = bytes1(0x1f);
-    /* using NaturalNum for uint256[]; */
     uint8 constant MOD_EXP_PRECOMPILE_ADDRESS = 0x5;
 
     event Add(uint r0, uint r1);
@@ -336,6 +335,77 @@ contract DepositVerifier  {
     function get_base_field() public pure returns (Fp memory) {
         return Fp(BLS_BASE_FIELD_A, BLS_BASE_FIELD_B);
     }
+
+    /* function lmod(Fp memory x, Fp memory p) public pure returns (Fp memory) { */
+    /*     uint r0; */
+    /*     uint r1; */
+    /*     uint carry = 0; */
+    /*     uint xb = x.b; */
+    /*     uint xa = x.a; */
+    /*     uint pb = p.b; */
+    /*     uint pa = p.a; */
+    /**/
+    /*     assembly { */
+    /*          */
+    /*     } */
+    /**/
+    /*     return Fp(r1, r0); */
+    /* } */
+    /* function lgte(Fp memory x, Fp memory y) public pure returns (Fp memory) { */
+    /*     if x */
+    /* } */
+
+    function bitLength(uint256 n) private pure returns (uint256) { unchecked {
+        uint256 m;
+
+        for (uint256 s = 128; s > 0; s >>= 1) {
+            if (n >= 1 << s) {
+                n >>= s;
+                m |= s;
+            }
+        }
+
+        return m + 1;
+    }}
+    function shl(Fp memory x, uint256 n) public pure returns (Fp memory) { unchecked {
+        if (x.a == 0 && x.b == 0)
+            return x;
+        
+        uint256 bits_shift = n % 256;
+        uint256 comp_shift = 256 - bits_shift;
+
+        /* uint256 remainder = 0; */
+
+        uint256 u = x.b;
+        uint r0 = u << n;
+        uint remainder = u >> comp_shift;
+        u = x.a;
+        uint r1 = u << n | remainder;
+        remainder = u >> comp_shift;
+        require(remainder == 0, "overflow");
+
+        return Fp(r1, r0);
+    }}
+
+    /* function ldiv(Fp memory x, Fp memory y) public pure returns (Fp memory) { */
+    /*     require((y.a != 0 || y.b != 0), "division by zero"); */
+    /*     uint x_bit_length = bitLength(x.a) + bitLength(x.b); */
+    /*     uint y_bit_length = bitLength(y.a) + bitLength(y.b); */
+    /*     uint r0; */
+    /*     uint r1; */
+    /*     uint carry = 0; */
+    /*     uint xb = x.b; */
+    /*     uint xa = x.a; */
+    /*     uint yb = y.b; */
+    /*     uint ya = y.a; */
+    /*     uint shift; */
+    /**/
+    /*     while(x_bit_length > y_bit_length) { */
+    /*         uint shift = x_bit_length - y_bit_length - 1; */
+    /*     } */
+    /**/
+    /*     return Fp(r1, r0); */
+    /* } */
 
     function lsub(Fp memory x, Fp memory y) public pure returns (Fp memory) {
         uint r0;

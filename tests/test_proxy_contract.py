@@ -136,6 +136,33 @@ def test_ladd_big(proxy_contract):
 
     assert expected == _convert_fp_to_int(actual)
 
+def test_shl_small(proxy_contract):
+    FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
+    fp_a, n = FQ(1), 10
+    expected = FQ(1 << n)
+    fp_a_repr = _convert_int_to_fp_repr(fp_a)
+    actual = proxy_contract.functions.shl(fp_a_repr, n).call()
+
+    print(f"actual: {actual}")
+    print(f"actual: {_convert_fp_to_int(actual)}")
+    print(f"expected: {type(expected)}")
+    print(f"expected: {expected}")
+
+    assert expected == _convert_fp_to_int(actual)
+
+def test_shl_medium(proxy_contract):
+    FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
+    fp_a, n = FQ(UINT_MAX), 10
+    expected = FQ(UINT_MAX << n)
+    fp_a_repr = _convert_int_to_fp_repr(fp_a)
+    actual = proxy_contract.functions.shl(fp_a_repr, n).call()
+
+    print(f"actual: {actual}")
+    print(f"actual: {_convert_fp_to_int(actual)}")
+    print(f"expected: {type(expected)}")
+    print(f"expected: {expected}")
+
+    assert expected == _convert_fp_to_int(actual)
 def test_lmul_small(proxy_contract):
     FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
     fp_a, fp_b = FQ(3), FQ(3)
