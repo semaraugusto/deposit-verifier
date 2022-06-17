@@ -81,6 +81,21 @@ library NaturalNum {
         return compress(max);
     }}
 
+    function natural_add(uint256[] memory x, uint256[] memory y) internal pure returns (uint256[] memory) { unchecked {
+        (uint256[] memory min, uint256[] memory max) = x.length < y.length ? (x, y) : (y, x);
+
+        uint256[] memory result = allocate(max.length + 1);
+        uint256 carry = 0;
+
+        for (uint256 i = 0; i < min.length; ++i)
+            (result[i], carry) = add(min[i], max[i], carry);
+
+        for (uint256 i = min.length; i < max.length; ++i)
+            (result[i], carry) = add(0, max[i], carry);
+
+        result[max.length] = carry;
+        return compress(result);
+    }}
     function add(uint256[] memory x, uint256[] memory y) internal pure returns (uint256[] memory) { unchecked {
         (uint256[] memory min, uint256[] memory max) = x.length < y.length ? (x, y) : (y, x);
 

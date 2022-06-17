@@ -2,20 +2,24 @@
 pragma solidity 0.8.14;
 pragma experimental ABIEncoderV2;
 
-import { NaturalNum } from "./NaturalNum.sol";
+/* import { BigNumContract } from "./BigNum.sol"; */
+/* import { NaturalNum } from "./NaturalNum.sol"; */
+/* import { BigNum } from "./libs/BigNum.sol"; */
+/* import { NaturalNumUser } from "./NaturalNumUser.sol"; */
 
 contract DepositVerifier  {
     uint constant PUBLIC_KEY_LENGTH = 48;
     uint constant SIGNATURE_LENGTH = 96;
     uint constant WITHDRAWAL_CREDENTIALS_LENGTH = 32;
     uint constant WEI_PER_GWEI = 1e9;
+    uint constant UINT_MAX = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
 
     uint8 constant BLS12_381_PAIRING_PRECOMPILE_ADDRESS = 0x10;
     uint8 constant BLS12_381_MAP_FIELD_TO_CURVE_PRECOMPILE_ADDRESS = 0x12;
     uint8 constant BLS12_381_G2_ADD_ADDRESS = 0xD;
     string constant BLS_SIG_DST = "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_+";
     bytes1 constant BLS_BYTE_WITHOUT_FLAGS_MASK = bytes1(0x1f);
-
+    /* using NaturalNum for uint256[]; */
     uint8 constant MOD_EXP_PRECOMPILE_ADDRESS = 0x5;
 
     event Add(uint r0, uint r1);
@@ -43,8 +47,8 @@ contract DepositVerifier  {
         Fp2 X;
         Fp2 Y;
     }
-    uint constant BLS_BASE_FIELD_B = 0x64774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab;
-    uint constant BLS_BASE_FIELD_A = 0x1a0111ea397fe69a4b1ba7b6434bacd7;
+    uint256 constant BLS_BASE_FIELD_B = 0x64774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab;
+    uint256 constant BLS_BASE_FIELD_A = 0x1a0111ea397fe69a4b1ba7b6434bacd7;
 
     // uint constant BLS12_381_BASE_FIELD_MODULUS = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab;
 
@@ -324,11 +328,53 @@ contract DepositVerifier  {
         return Fp(r1, r0);
     }
 
-    // function ladd(uint xa, uint xb, uint ya, uint yb) public pure returns (Fp memory) {
+    function get_base_field() public pure returns (Fp memory) {
+        return Fp(BLS_BASE_FIELD_A, BLS_BASE_FIELD_B);
+    }
+
+    function lsub(Fp memory x, Fp memory y) public pure returns (Fp memory) {
+        uint r0;
+        uint r1;
+        uint carry = 0;
+        uint xb = x.b;
+        uint xa = x.a;
+        uint yb = y.b;
+        uint ya = y.a;
+        require(xa >= ya, "underflow");
+        if (xa == ya) {
+            require(xb >= yb, "underflow");
+        }
+
+        r1 = xa - ya;
+        r1 = 0;
+        assembly {
+            r0 := sub(xb, yb)
+        }
+        if(r0 > xb && r1 > 0) {
+            assembly {
+                r0 := add(r0, UINT_MAX)
+                r1 := add(r1, 1)
+            }
+        }
+        return Fp(r1, r0);
+    }
+    function lsub(uint256 x, uint256 y, uint256 carry) private pure returns (uint256, uint256) { unchecked {
+        if (x > 0)
+            return lsub(x - carry, y);
+        if (y < type(uint256).max)
+            return lsub(x, y + carry);
+        return (1 - carry, 1);
+    }}
+
+    function lsub(uint256 x, uint256 y) private pure returns (uint256, uint256) { unchecked {
+        uint256 z = x - y;
+        return (z, z > x ? 1 : 0);
+    }}
+
     function ladd(Fp memory x, Fp memory y) public pure returns (Fp memory) {
         uint r0;
-        uint r0_a;
         uint r1;
+        uint r0_a;
         uint carry_b;
         uint xb = x.b;
         uint xa = x.a;
@@ -346,17 +392,13 @@ contract DepositVerifier  {
             r1 := sub(sub(rem, r0_a), lt(rem, r0_a))
 
             // add carry
-            r1 := addmod(r1, carry_b, BLS_BASE_FIELD_A)
-            r1 := sub(r1, mul(div(r1, BLS_BASE_FIELD_A), BLS_BASE_FIELD_A))
+            r1 := add(r1, carry_b)
+            /* r1 := sub(r1, mul(div(r1, BLS_BASE_FIELD_A), BLS_BASE_FIELD_A)) */
             /* r0 := sub(r0, mul(div(r0, BLS_BASE_FIELD_B), BLS_BASE_FIELD_B)) */
         }
-        /* uint[] memory r = new uint[]([r1, r0]); */
-        /* uint[] memory b = new uint[]([BLS_BASE_FIELD_A, BLS_BASE_FIELD_B]); */
-        /* (r1, r0) = NaturalNum.mod(r, b); */
-
         return Fp(r1, r0);
     }
-
+    
     // This function is being used for testing purposes. 
     function addG2NoPrecompile(G2Point memory a, G2Point memory b) public view returns (G2Point memory) {
         if(G2_isZeroNoPrecompile(a.X, a.Y)) {

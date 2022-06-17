@@ -60,7 +60,7 @@ def _convert_int_to_fp2_repr(field_element):
 
 def _convert_fp_to_int(fp_repr):
     a, b = fp_repr
-    a_bytes = a.to_bytes(16, byteorder="big")
+    a_bytes = a.to_bytes(17, byteorder="big")
     b_bytes = b.to_bytes(32, byteorder="big")
     full_bytes = b"".join((a_bytes, b_bytes))
     return int.from_bytes(full_bytes, byteorder="big")
@@ -100,6 +100,13 @@ def test_hash_to_field_matches_spec(proxy_contract, signing_root, dst):
 #     # print(converted_result)
 #
 #     assert expected == actual
+def test_base_field(proxy_contract):
+    expected = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
+    actual = proxy_contract.functions.get_base_field().call()
+    print(f"actual: {actual}")
+    print(f"expected: {type(actual)}")
+
+    assert expected == _convert_fp_to_int(actual)
 def test_ladd_big(proxy_contract):
     FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
     fp_a, fp_b = FQ(100), FQ(FQ.field_modulus-1)
@@ -143,7 +150,6 @@ def test_ladd_medium(proxy_contract):
     actual = proxy_contract.functions.ladd(fp_a_repr, fp_b_repr).call()
 
     print(f"actual: {actual}")
-    print(f"actual: {_convert_fp_to_int(actual)}")
     print(f"expected: {type(actual)}")
 
     assert expected == _convert_fp_to_int(actual)
@@ -170,6 +176,72 @@ def test_ladd_small(proxy_contract):
     print(f"expected: {type(actual)}")
 
     assert expected == _convert_fp_to_int(actual)
+
+def test_lsub_small(proxy_contract):
+    FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
+    fp_a, fp_b = FQ(2), FQ(1)
+    expected = FQ(1)
+    print(f"expected: {expected}")
+    print(f"expected: {type(expected)}")
+
+    # aa, ab = fp_a
+    # ba, bb = fp_b
+    print(f"fpa: {fp_a}")
+    print(f"typeof fpa: {type(fp_a)}")
+    print(f"fpb: {fp_b}")
+    print(f"typeof fpa: {type(fp_b)}")
+    fp_a_repr = _convert_int_to_fp_repr(fp_a)
+    fp_b_repr = _convert_int_to_fp_repr(fp_b)
+    actual = proxy_contract.functions.lsub(fp_a_repr, fp_b_repr).call()
+
+    print(f"actual: {actual}")
+    print(f"actual: {_convert_fp_to_int(actual)}")
+    print(f"expected: {type(actual)}")
+
+    assert expected == _convert_fp_to_int(actual)
+def test_lsub_medium(proxy_contract):
+    FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
+    fp_a, fp_b = FQ(UINT_MAX * 2), FQ(UINT_MAX)
+    expected = FQ(UINT_MAX)
+    print(f"expected: {expected}")
+    print(f"expected: {type(expected)}")
+
+    # aa, ab = fp_a
+    # ba, bb = fp_b
+    print(f"fpa: {fp_a}")
+    print(f"typeof fpa: {type(fp_a)}")
+    print(f"fpb: {fp_b}")
+    print(f"typeof fpa: {type(fp_b)}")
+    fp_a_repr = _convert_int_to_fp_repr(fp_a)
+    fp_b_repr = _convert_int_to_fp_repr(fp_b)
+    actual = proxy_contract.functions.lsub(fp_a_repr, fp_b_repr).call()
+
+    print(f"actual: {actual}")
+    print(f"actual: {_convert_fp_to_int(actual)}")
+    print(f"expected: {type(actual)}")
+
+    assert expected == _convert_fp_to_int(actual)
+
+def test_lsub_big(proxy_contract):
+    FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
+    fp_a, fp_b = FQ(FQ.field_modulus-1), FQ(100)
+    expected = FQ(FQ.field_modulus - 101)
+    print(f"expected: {expected}")
+    print(f"expected: {type(expected)}")
+
+    # aa, ab = fp_a
+    # ba, bb = fp_b
+    print(f"fpa: {fp_a}")
+    print(f"typeof fpa: {type(fp_a)}")
+    print(f"fpb: {fp_b}")
+    print(f"typeof fpa: {type(fp_b)}")
+    fp_a_repr = _convert_int_to_fp_repr(fp_a)
+    fp_b_repr = _convert_int_to_fp_repr(fp_b)
+    actual = proxy_contract.functions.lsub(fp_a_repr, fp_b_repr).call()
+
+    print(f"actual: {actual}")
+    print(f"actual: {_convert_fp_to_int(actual)}")
+    print(f"expected: {type(actual)}")
 
 def test_add():
     FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
@@ -357,196 +429,3 @@ def test_bls_signature_is_valid_fails_with_invalid_signature(
         public_key_witness_repr,
         signature_witness_repr,
     ).call()
-
-
-# def test_verify_and_deposit(
-#     proxy_contract,
-#     bls_public_key,
-#     withdrawal_credentials,
-#     signature,
-#     deposit_data_root,
-#     public_key_witness,
-#     signature_witness,
-#     deposit_amount,
-#     w3,
-# ):
-#     public_key_witness_repr = _convert_int_to_fp_repr(public_key_witness)
-#     signature_witness_repr = _convert_int_to_fp2_repr(signature_witness)
-#     amount_in_wei = deposit_amount * 10 ** 9
-#     txn_hash = proxy_contract.functions.verifyAndDeposit(
-#         bls_public_key,
-#         withdrawal_credentials,
-#         signature,
-#         public_key_witness_repr,
-#         signature_witness_repr,
-#     ).transact({"value": amount_in_wei})
-#
-#     txn_receipt = w3.eth.getTransactionReceipt(txn_hash)
-#     block_hash = txn_receipt.blockHash
-#
-#     print(txn_receipt)
-#
-#     print(f"\nVerification gas cost {txn_receipt['cumulativeGasUsed']}\n", file=sys.stderr)
-#     # print(txn_receipt["gasUsed"], file=sys.stderr)
-#
-#     assert(txn_receipt["cumulativeGasUsed"] == txn_receipt["gasUsed"])
-#
-# def test_verify_and_deposit_fails_with_short_public_key(
-#     proxy_contract,
-#     bls_public_key,
-#     withdrawal_credentials,
-#     signature,
-#     deposit_data_root,
-#     public_key_witness,
-#     signature_witness,
-#     deposit_amount,
-#     assert_tx_failed,
-# ):
-#     public_key_witness_repr = _convert_int_to_fp_repr(public_key_witness)
-#     signature_witness_repr = _convert_int_to_fp2_repr(signature_witness)
-#     amount_in_wei = deposit_amount * 10 ** 9
-#     txn = proxy_contract.functions.verifyAndDeposit(
-#         bls_public_key[1:],
-#         withdrawal_credentials,
-#         signature,
-#         public_key_witness_repr,
-#         signature_witness_repr,
-#     )
-#     assert_tx_failed(lambda: txn.transact({"value": amount_in_wei}))
-#
-# def test_verify_and_deposit_fails_with_short_signature(
-#     proxy_contract,
-#     bls_public_key,
-#     withdrawal_credentials,
-#     signature,
-#     deposit_data_root,
-#     public_key_witness,
-#     signature_witness,
-#     deposit_amount,
-#     assert_tx_failed,
-# ):
-#     public_key_witness_repr = _convert_int_to_fp_repr(public_key_witness)
-#     signature_witness_repr = _convert_int_to_fp2_repr(signature_witness)
-#     amount_in_wei = deposit_amount * 10 ** 9
-#     txn = proxy_contract.functions.verifyAndDeposit(
-#         bls_public_key,
-#         withdrawal_credentials,
-#         signature[1:],
-#         public_key_witness_repr,
-#         signature_witness_repr,
-#     )
-#     assert_tx_failed(lambda: txn.transact({"value": amount_in_wei}))
-#
-# def test_verify_and_deposit_fails_with_incorrect_message_via_withdrawal_credentials(
-#     proxy_contract,
-#     bls_public_key,
-#     withdrawal_credentials,
-#     signature,
-#     deposit_data_root,
-#     public_key_witness,
-#     signature_witness,
-#     deposit_amount,
-#     assert_tx_failed,
-# ):
-#     public_key_witness_repr = _convert_int_to_fp_repr(public_key_witness)
-#     signature_witness_repr = _convert_int_to_fp2_repr(signature_witness)
-#     amount_in_wei = deposit_amount * 10 ** 9
-#     # NOTE: we modify the ``withdrawal_credentials`` to induce an incorrect message for the given
-#     # public key and signature
-#     txn = proxy_contract.functions.verifyAndDeposit(
-#         bls_public_key,
-#         withdrawal_credentials[1:],
-#         signature,
-#         public_key_witness_repr,
-#         signature_witness_repr,
-#     )
-#     assert_tx_failed(lambda: txn.transact({"value": amount_in_wei}))
-#
-# def test_verify_and_deposit_fails_with_incorrect_message_via_msg_value(
-#     proxy_contract,
-#     bls_public_key,
-#     withdrawal_credentials,
-#     signature,
-#     deposit_data_root,
-#     public_key_witness,
-#     signature_witness,
-#     deposit_amount,
-#     assert_tx_failed,
-# ):
-#     public_key_witness_repr = _convert_int_to_fp_repr(public_key_witness)
-#     signature_witness_repr = _convert_int_to_fp2_repr(signature_witness)
-#     amount_in_wei = deposit_amount * 10 ** 9
-#     txn = proxy_contract.functions.verifyAndDeposit(
-#         bls_public_key,
-#         withdrawal_credentials,
-#         signature,
-#         public_key_witness_repr,
-#         signature_witness_repr,
-#     )
-#     # NOTE: we modify the `msg.value` to induce an incorrect message for the given
-#     # public key and signature
-#     assert_tx_failed(lambda: txn.transact({"value": amount_in_wei - 1}))
-#
-# def test_verify_and_deposit_fails_with_incorrect_public_key(
-#     proxy_contract,
-#     withdrawal_credentials,
-#     signature,
-#     deposit_data_root,
-#     public_key_witness,
-#     signature_witness,
-#     deposit_amount,
-#     assert_tx_failed,
-#     seed,
-# ):
-#     another_seed = "another-secret".encode()
-#     assert seed != another_seed
-#     another_private_key = G2ProofOfPossession.KeyGen(another_seed)
-#     public_key = G2ProofOfPossession.SkToPk(another_private_key)
-#
-#     group_element = pubkey_to_G1(public_key)
-#     normalized_group_element = normalize(group_element)
-#     public_key_witness = normalized_group_element[1]
-#     public_key_witness_repr = _convert_int_to_fp_repr(public_key_witness)
-#     signature_witness_repr = _convert_int_to_fp2_repr(signature_witness)
-#     amount_in_wei = deposit_amount * 10 ** 9
-#     txn = proxy_contract.functions.verifyAndDeposit(
-#         public_key,
-#         withdrawal_credentials,
-#         signature,
-#         public_key_witness_repr,
-#         signature_witness_repr,
-#     )
-#     assert_tx_failed(lambda: txn.transact({"value": amount_in_wei}))
-#
-# def test_verify_and_deposit_fails_with_incorrect_signature(
-#     proxy_contract,
-#     bls_public_key,
-#     withdrawal_credentials,
-#     signature,
-#     deposit_data_root,
-#     public_key_witness,
-#     signature_witness,
-#     deposit_amount,
-#     assert_tx_failed,
-#     signing_root,
-#     bls_private_key,
-# ):
-#     public_key_witness_repr = _convert_int_to_fp_repr(public_key_witness)
-#
-#     another_message = hashlib.sha256(b"not the signing root").digest()
-#     assert signing_root != another_message
-#     signature = G2ProofOfPossession.Sign(bls_private_key, another_message)
-#     group_element = signature_to_G2(signature)
-#     normalized_group_element = normalize(group_element)
-#     signature_witness = normalized_group_element[1]
-#     signature_witness_repr = _convert_int_to_fp2_repr(signature_witness)
-#
-#     amount_in_wei = deposit_amount * 10 ** 9
-#     txn = proxy_contract.functions.verifyAndDeposit(
-#         bls_public_key,
-#         withdrawal_credentials,
-#         signature,
-#         public_key_witness_repr,
-#         signature_witness_repr,
-#     )
-#     assert_tx_failed(lambda: txn.transact({"value": amount_in_wei}))
