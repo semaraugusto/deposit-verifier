@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: The Unlicense
-pragma solidity 0.6.8;
+pragma solidity 0.8.14;
 pragma experimental ABIEncoderV2;
+
+import { NaturalNum } from "./NaturalNum.sol";
 
 contract DepositVerifier  {
     uint constant PUBLIC_KEY_LENGTH = 48;
@@ -61,7 +63,7 @@ contract DepositVerifier  {
 
     uint256 MAX_U256 = 2**256-1;
 
-    constructor(bytes32 deposit_domain) public {
+    constructor(bytes32 deposit_domain) {
         DEPOSIT_DOMAIN = deposit_domain;
     }
 
@@ -72,7 +74,7 @@ contract DepositVerifier  {
         bytes memory encodedAmount = new bytes(8);
 
         for (uint i = 0; i < 8; i++) {
-            encodedAmount[i] = byte(uint8(depositAmount / (2**(8*i))));
+            encodedAmount[i] = bytes1(uint8(depositAmount / (2**(8*i))));
         }
 
         return encodedAmount;
@@ -121,7 +123,7 @@ contract DepositVerifier  {
         bytes32 b0 = sha256(abi.encodePacked(b0Input));
 
         bytes memory output = new bytes(256);
-        bytes32 chunk = sha256(abi.encodePacked(b0, byte(0x01), bytes(BLS_SIG_DST)));
+        bytes32 chunk = sha256(abi.encodePacked(b0, bytes1(0x01), bytes(BLS_SIG_DST)));
         assembly {
             mstore(add(output, 0x20), chunk)
         }
@@ -130,7 +132,7 @@ contract DepositVerifier  {
             assembly {
                 input := xor(b0, mload(add(output, add(0x20, mul(0x20, sub(i, 2))))))
             }
-            chunk = sha256(abi.encodePacked(input, byte(uint8(i)), bytes(BLS_SIG_DST)));
+            chunk = sha256(abi.encodePacked(input, bytes1(uint8(i)), bytes(BLS_SIG_DST)));
             assembly {
                 mstore(add(output, add(0x20, mul(0x20, sub(i, 1)))), chunk)
             }
@@ -146,7 +148,7 @@ contract DepositVerifier  {
 
         uint result;
         for (uint i = 0; i < length; i++) {
-            byte b = data[start+i];
+            bytes1 b = data[start+i];
             result = result + (uint8(b) * 2**(8*(length-i-1)));
         }
         return result;
@@ -348,6 +350,10 @@ contract DepositVerifier  {
             r1 := sub(r1, mul(div(r1, BLS_BASE_FIELD_A), BLS_BASE_FIELD_A))
             /* r0 := sub(r0, mul(div(r0, BLS_BASE_FIELD_B), BLS_BASE_FIELD_B)) */
         }
+        /* uint[] memory r = new uint[]([r1, r0]); */
+        /* uint[] memory b = new uint[]([BLS_BASE_FIELD_A, BLS_BASE_FIELD_B]); */
+        /* (r1, r0) = NaturalNum.mod(r, b); */
+
         return Fp(r1, r0);
     }
 
