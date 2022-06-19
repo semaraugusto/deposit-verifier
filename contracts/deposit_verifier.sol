@@ -364,8 +364,13 @@ contract DepositVerifier  {
         return m + 1;
     }}
 
-    function bitLength(Fp memory p) private pure returns (uint256) { unchecked {
-        return bitLength(p.a) + bitLength(p.b);
+    function bitLength(Fp memory p) public pure returns (uint256) { unchecked {
+        uint a_length = bitLength(p.a);
+        if (p.a > 0) {
+            return a_length + 256;
+        }
+        return bitLength(p.b);
+        /* bitLength(p.b); */
     }}
 
     function shl(Fp memory x, uint256 n) public pure returns (Fp memory) { unchecked {
@@ -390,8 +395,8 @@ contract DepositVerifier  {
 
     function ldiv(Fp memory x, Fp memory y) public pure returns (Fp memory) { unchecked {
         require((y.a != 0 || y.b != 0), "division by zero");
-        uint x_bit_length = bitLength(x.a) + bitLength(x.b);
-        uint y_bit_length = bitLength(y.a) + bitLength(y.b);
+        uint x_bit_length = bitLength(x);
+        uint y_bit_length = bitLength(y);
         Fp memory one = Fp(0, 1);
         Fp memory p;
         while(x_bit_length > y_bit_length) {
@@ -422,15 +427,10 @@ contract DepositVerifier  {
         uint xa = x.a;
         uint yb = y.b;
         uint ya = y.a;
-        require(xa >= ya, "underflow");
-        if (xa == ya) {
-            require(xb >= yb, "underflow");
-        }
 
         (r0, carry) = lsub(xb, yb, carry);
         (r1, carry) = lsub(xa, ya, carry);
         require(carry == 0, "underflow");
-        /* return compress(result); */
         return Fp(r1, r0);
     }}
 
