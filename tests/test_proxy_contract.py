@@ -227,11 +227,96 @@ def test_ladd_fq2(proxy_contract):
 
     assert expected == actual
 
-def test_ladd_big(proxy_contract):
+def test_lmod_small(proxy_contract):
+    FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
+    fp_a, fp_b = FQ(100), FQ(10)
+    expected = FQ(0)
+
+    print(f"expected: {expected}")
+    print(f"expected: {type(expected)}")
+
+    print(f"fpa: {fp_a}")
+    print(f"typeof fpa: {type(fp_a)}")
+    print(f"fpb: {fp_b}")
+    print(f"typeof fpa: {type(fp_b)}")
+    fp_a_repr = _convert_int_to_fp_repr(fp_a)
+    fp_b_repr = _convert_int_to_fp_repr(fp_b)
+    actual = proxy_contract.functions.lmod(fp_a_repr, fp_b_repr).call()
+
+    print(f"actual: {actual}")
+    print(f"actual_c: {_convert_fp_to_int(actual)}")
+    print(f"expected: {type(actual)}")
+    assert expected == _convert_fp_to_int(actual)
+
+def test_lmod_medium(proxy_contract):
+    FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
+    fp_a, fp_b = FQ(UINT_MAX*100 + 100), FQ(UINT_MAX*100)
+    expected = FQ(100)
+
+    print(f"expected: {expected}")
+    print(f"expected: {type(expected)}")
+
+    print(f"fpa: {fp_a}")
+    print(f"typeof fpa: {type(fp_a)}")
+    print(f"fpb: {fp_b}")
+    print(f"typeof fpa: {type(fp_b)}")
+    fp_a_repr = _convert_int_to_fp_repr(fp_a)
+    fp_b_repr = _convert_int_to_fp_repr(fp_b)
+    actual = proxy_contract.functions.lmod(fp_a_repr, fp_b_repr).call()
+
+    print(f"actual: {actual}")
+    print(f"actual_c: {_convert_fp_to_int(actual)}")
+    print(f"expected: {type(actual)}")
+    assert expected == _convert_fp_to_int(actual)
+
+def test_lmod_base_field(proxy_contract):
+    FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
+    fp_a, fp_b = FQ((FQ.field_modulus-1)*5 + 100), FQ(FQ.field_modulus-1)
+    expected = FQ(100)
+
+    print(f"expected: {expected}")
+    print(f"expected: {type(expected)}")
+
+    print(f"fpa: {fp_a}")
+    print(f"typeof fpa: {type(fp_a)}")
+    print(f"fpb: {fp_b}")
+    print(f"typeof fpa: {type(fp_b)}")
+    fp_a_repr = _convert_int_to_fp_repr(fp_a)
+    fp_b_repr = _convert_int_to_fp_repr(fp_b)
+    actual = proxy_contract.functions.lmod(fp_a_repr, fp_b_repr).call()
+
+    print(f"actual: {actual}")
+    print(f"actual_c: {_convert_fp_to_int(actual)}")
+    print(f"expected: {type(actual)}")
+    assert expected == _convert_fp_to_int(actual)
+
+def test_ladd_big_2(proxy_contract):
+    FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
+    fp_a, fp_b = FQ(100+FQ.field_modulus-1), FQ(FQ.field_modulus-10)
+    expected = FQ(90)
+
+    print(f"expected: {expected}")
+    print(f"expected: {type(expected)}")
+
+    print(f"fpa: {fp_a}")
+    print(f"typeof fpa: {type(fp_a)}")
+    print(f"fpb: {fp_b}")
+    print(f"typeof fpa: {type(fp_b)}")
+    fp_a_repr = _convert_int_to_fp_repr(fp_a)
+    fp_b_repr = _convert_int_to_fp_repr(fp_b)
+    actual = proxy_contract.functions.ladd(fp_a_repr, fp_b_repr).call()
+
+    print(f"actual: {actual}")
+    print(f"actual_c: {_convert_fp_to_int(actual)}")
+    print(f"expected: {type(actual)}")
+    assert expected == _convert_fp_to_int(actual)
+
+def test_ladd_big_1(proxy_contract):
     FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
     fp_a, fp_b = FQ(100), FQ(FQ.field_modulus-1)
     actual = FQ(fp_a + fp_b)
     expected = FQ(99)
+    assert actual == expected
 
     print(f"expected: {expected}")
     print(f"expected: {type(expected)}")
@@ -247,6 +332,7 @@ def test_ladd_big(proxy_contract):
     actual = proxy_contract.functions.ladd(fp_a_repr, fp_b_repr).call()
 
     print(f"actual: {actual}")
+    print(f"actual_c: {_convert_fp_to_int(actual)}")
     print(f"expected: {type(actual)}")
     assert expected == _convert_fp_to_int(actual)
 
