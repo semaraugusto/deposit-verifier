@@ -301,7 +301,18 @@ contract DepositVerifier  {
         return((x.a.a | x.a.b | x.b.a | x.b.b | y.a.a | y.a.b | y.b.a | y.b.b) == 0);
     }
 
-    function lmul(Fp memory x, Fp memory y) public pure returns (Fp memory result) {
+    function lmul(uint256 x, uint256 y) public pure returns (Fp memory result) { unchecked {
+        uint r0;
+        uint r1;
+        assembly {
+            let rem := mulmod(x, y, not(0))
+            r0 := mul(x, y)
+            r1 := sub(sub(rem, r0), lt(rem, r0))
+        }
+        return Fp(r1, r0);
+    }}
+
+    function lmul(Fp memory x, Fp memory y) public pure returns (Fp memory) {
         uint r0;
         uint r1;
         uint r1_carry;
@@ -310,34 +321,33 @@ contract DepositVerifier  {
         uint xa = x.a;
         uint yb = y.b;
         uint ya = y.a;
-        assembly {
-            // multiply least significant bits
-            let rem_b := mulmod(xb, yb, not(0))
-            r0 := mul(xb, yb)
-            r1_carry := sub(sub(rem_b, r0), lt(rem_b, r0))
+        Fp memory partial_res; 
+        partial_res = lmul(xb, yb);
+        r1_carry = partial_res.a;
+        r0 = partial_res.b;
+        partial_res = lmul(xa, ya);
+        r1 = partial_res.b + r1_carry;
+        require(partial_res.a == 0, "overflow");
 
-            // multiply more significant bits
-            let rem := mulmod(xa, ya, not(0))
-            r1 := mul(xa, ya)
-            r2_carry := sub(sub(rem, r1), lt(rem, r1))
-            // what to do with this r2_carry? Need to mod with prime base field?
-            r1 := add(r1, r1_carry)
-        }
-        result = Fp(r1, r0);
-        Fp memory base_field = get_base_field();
-        if (lgte(result, base_field)) {
-            return lmod(result, base_field);
-        }
-        return result;
-        /* return Fp(r1, r0); */
+        /* return result; */
+        return Fp(r1, r0);
     }
 
     function get_base_field() public pure returns (Fp memory) {
         return Fp(BLS_BASE_FIELD_A, BLS_BASE_FIELD_B);
     }
 
+    function lmod_field_multiple(Fp memory x, Fp memory p) public pure returns (Fp memory) {
+            Fp memory partial_res = ldiv(x, p);
+            return lmul(partial_res, p);
+    }
     function lmod(Fp memory x, Fp memory p) public pure returns (Fp memory) {
-        return lsub(x, lmul(ldiv(x, p), p));
+        if (lgte(x, p)) {
+            Fp memory partial_res = ldiv(x, p);
+            partial_res = lmul(partial_res, p);
+            return lsub(x, partial_res);
+        }
+        return x;
     }
 
     function lgte(Fp memory x, Fp memory y) public pure returns (bool) {
@@ -365,8 +375,8 @@ contract DepositVerifier  {
     }}
 
     function bitLength(Fp memory p) public pure returns (uint256) { unchecked {
-        uint a_length = bitLength(p.a);
         if (p.a > 0) {
+            uint a_length = bitLength(p.a);
             return a_length + 256;
         }
         return bitLength(p.b);
@@ -395,6 +405,9 @@ contract DepositVerifier  {
 
     function ldiv(Fp memory x, Fp memory y) public pure returns (Fp memory) { unchecked {
         require((y.a != 0 || y.b != 0), "division by zero");
+        if((x.a == y.a) && (x.b == y.b)) {
+            return Fp(0, 1);
+        }
         uint x_bit_length = bitLength(x);
         uint y_bit_length = bitLength(y);
         Fp memory one = Fp(0, 1);
@@ -476,9 +489,8 @@ contract DepositVerifier  {
         Fp memory result = Fp(r1, r0);
         Fp memory base_field = get_base_field();
         if (lgte(result, base_field)) {
-            require(false, "failed");
+            return lmod(result, base_field);
         }
-        /* return lmod(result, base_field); */
         return result;
         /* return lmod(result, get_base_field()); */
     }}
