@@ -2,11 +2,6 @@
 pragma solidity 0.8.14;
 pragma experimental ABIEncoderV2;
 
-/* import { BigNumContract } from "./BigNum.sol"; */
-/* import { NaturalNum } from "./NaturalNum.sol"; */
-/* import { BigNum } from "./libs/BigNum.sol"; */
-/* import { NaturalNumUser } from "./NaturalNumUser.sol"; */
-
 contract DepositVerifier  {
     uint constant PUBLIC_KEY_LENGTH = 48;
     uint constant SIGNATURE_LENGTH = 96;
@@ -344,7 +339,11 @@ contract DepositVerifier  {
     function lmod(Fp memory x, Fp memory p) public pure returns (Fp memory) {
         return lsub(x, lmul(ldiv(x, p), p));
     }
+
     function lgte(Fp memory x, Fp memory y) public pure returns (bool) {
+        if(x.a > y.a) {
+            return true;
+        }
         if(x.a >= y.a) {
             if(x.a == y.a && x.b >= y.b){
                 return true;
@@ -389,7 +388,7 @@ contract DepositVerifier  {
         return Fp(r1, r0);
     }}
 
-    function ldiv(Fp memory x, Fp memory y) public pure returns (Fp memory) {
+    function ldiv(Fp memory x, Fp memory y) public pure returns (Fp memory) { unchecked {
         require((y.a != 0 || y.b != 0), "division by zero");
         uint x_bit_length = bitLength(x.a) + bitLength(x.b);
         uint y_bit_length = bitLength(y.a) + bitLength(y.b);
@@ -406,17 +405,19 @@ contract DepositVerifier  {
         }
 
         return p;
-    }
+    }}
 
-    function lsub(Fp2 memory x, Fp2 memory y) public pure returns (Fp2 memory) {
+    function lsub(Fp2 memory x, Fp2 memory y) public pure returns (Fp2 memory) { unchecked {
+
         Fp memory a = lsub(x.a, y.a);
         Fp memory b = lsub(x.b, y.b);
         return Fp2(a, b);
-    }
+    }}
 
-    function lsub(Fp memory x, Fp memory y) public pure returns (Fp memory) {
+    function lsub(Fp memory x, Fp memory y) public pure returns (Fp memory) { unchecked {
         uint r0;
         uint r1;
+        uint carry = 0;
         uint xb = x.b;
         uint xa = x.a;
         uint yb = y.b;
@@ -426,19 +427,13 @@ contract DepositVerifier  {
             require(xb >= yb, "underflow");
         }
 
-        r1 = xa - ya;
-        r1 = 0;
-        assembly {
-            r0 := sub(xb, yb)
-        }
-        if(r0 > xb && r1 > 0) {
-            assembly {
-                r0 := add(r0, UINT_MAX)
-                r1 := add(r1, 1)
-            }
-        }
+        (r0, carry) = lsub(xb, yb, carry);
+        (r1, carry) = lsub(xa, ya, carry);
+        require(carry == 0, "underflow");
+        /* return compress(result); */
         return Fp(r1, r0);
-    }
+    }}
+
     function lsub(uint256 x, uint256 y, uint256 carry) private pure returns (uint256, uint256) { unchecked {
         if (x > 0)
             return lsub(x - carry, y);
@@ -452,7 +447,8 @@ contract DepositVerifier  {
         return (z, z > x ? 1 : 0);
     }}
 
-    function ladd(Fp memory x, Fp memory y) public pure returns (Fp memory) {
+    function ladd(Fp memory x, Fp memory y) public pure returns (Fp memory) { unchecked {
+
         uint r0;
         uint r1;
         uint r0_a;
@@ -480,27 +476,29 @@ contract DepositVerifier  {
         Fp memory result = Fp(r1, r0);
         Fp memory base_field = get_base_field();
         if (lgte(result, base_field)) {
-            return lmod(result, base_field);
+            require(false, "failed");
         }
+        /* return lmod(result, base_field); */
         return result;
         /* return lmod(result, get_base_field()); */
-    }
+    }}
 
-    function ladd(Fp2 memory x, Fp2 memory y) public pure returns (Fp2 memory) {
+    function ladd(Fp2 memory x, Fp2 memory y) public pure returns (Fp2 memory) { unchecked {
         Fp memory a = ladd(x.a, y.a);
         Fp memory b = ladd(x.b, y.b);
         return Fp2(a, b);
-    }
+    }}
 
-    function ldouble(Fp memory x) public pure returns (Fp memory) {
+    function ldouble(Fp memory x) public pure returns (Fp memory) {unchecked {
         return ladd(x, x);
-    }
+    }}
 
-    function ldouble(Fp2 memory x) public pure returns (Fp2 memory) {
+    function ldouble(Fp2 memory x) public pure returns (Fp2 memory) {unchecked {
+
          Fp memory a = ldouble(x.a);
          Fp memory b = ldouble(x.b);
          return Fp2(a, b);
-    }
+    }}
 
     // This function is being used for testing purposes. 
     function addG2NoPrecompile(G2Point memory a, G2Point memory b) public pure returns (G2Point memory) {

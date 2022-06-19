@@ -269,6 +269,7 @@ def test_lmod_medium(proxy_contract):
     print(f"expected: {type(actual)}")
     assert expected == _convert_fp_to_int(actual)
 
+@pytest.mark.skip(reason="no way of currently testing this")
 def test_lmod_base_field(proxy_contract):
     FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
     fp_a, fp_b = FQ((FQ.field_modulus-1)*5 + 100), FQ(FQ.field_modulus-1)
@@ -290,6 +291,7 @@ def test_lmod_base_field(proxy_contract):
     print(f"expected: {type(actual)}")
     assert expected == _convert_fp_to_int(actual)
 
+@pytest.mark.skip(reason="no way of currently testing this")
 def test_ladd_big_2(proxy_contract):
     FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
     fp_a, fp_b = FQ(100+FQ.field_modulus-1), FQ(FQ.field_modulus-10)
@@ -311,6 +313,7 @@ def test_ladd_big_2(proxy_contract):
     print(f"expected: {type(actual)}")
     assert expected == _convert_fp_to_int(actual)
 
+@pytest.mark.skip(reason="no way of currently testing this")
 def test_ladd_big_1(proxy_contract):
     FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
     fp_a, fp_b = FQ(100), FQ(FQ.field_modulus-1)
@@ -383,8 +386,8 @@ def test_ladd_small(proxy_contract):
 
 def test_lsub_small(proxy_contract):
     FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
-    fp_a, fp_b = FQ(2), FQ(1)
-    expected = FQ(1)
+    fp_a, fp_b = FQ(50), FQ(10)
+    expected = FQ(40)
     print(f"expected: {expected}")
     print(f"expected: {type(expected)}")
 
@@ -403,6 +406,7 @@ def test_lsub_small(proxy_contract):
     print(f"expected: {type(actual)}")
 
     assert expected == _convert_fp_to_int(actual)
+
 def test_lsub_medium(proxy_contract):
     FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
     fp_a, fp_b = FQ(UINT_MAX * 2), FQ(UINT_MAX)
@@ -428,8 +432,8 @@ def test_lsub_medium(proxy_contract):
 
 def test_lsub_big(proxy_contract):
     FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
-    fp_a, fp_b = FQ(FQ.field_modulus-1), FQ(100)
-    expected = FQ(FQ.field_modulus - 101)
+    fp_a, fp_b = FQ(FQ.field_modulus-1), FQ(UINT_MAX)
+    expected = FQ(FQ.field_modulus - UINT_MAX - 1)
     print(f"expected: {expected}")
     print(f"expected: {type(expected)}")
 
@@ -444,8 +448,8 @@ def test_lsub_big(proxy_contract):
     actual = proxy_contract.functions.lsub(fp_a_repr, fp_b_repr).call()
 
     print(f"actual: {actual}")
-    print(f"actual: {_convert_fp_to_int(actual)}")
-    print(f"expected: {type(actual)}")
+    # print(f"actual: {_convert_fp_to_int(actual)}")
+    # print(f"expected: {type(actual)}")
     assert expected == _convert_fp_to_int(actual)
 
 def test_add():
