@@ -88,6 +88,42 @@ def test_base_field(proxy_contract):
 
     assert expected == _convert_fp_to_int(actual)
 
+def test_lgte_small_eq(proxy_contract):
+    FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
+    fp_a, fp_b = FQ(10), FQ(10)
+    expected = 1
+    fp_a_repr = _convert_int_to_fp_repr(fp_a)
+    fp_b_repr = _convert_int_to_fp_repr(fp_b)
+    actual = proxy_contract.functions.lgte(fp_a_repr, fp_b_repr).call()
+
+    print(f"actual: {actual}")
+    print(f"expected: {expected}")
+    assert expected == actual
+
+def test_lgte_small_gt(proxy_contract):
+    FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
+    fp_a, fp_b = FQ(11), FQ(10)
+    expected = 1
+    fp_a_repr = _convert_int_to_fp_repr(fp_a)
+    fp_b_repr = _convert_int_to_fp_repr(fp_b)
+    actual = proxy_contract.functions.lgte(fp_a_repr, fp_b_repr).call()
+
+    print(f"actual: {actual}")
+    print(f"expected: {expected}")
+    assert expected == actual
+
+def test_lgte_small_lt(proxy_contract):
+    FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
+    fp_a, fp_b = FQ(9), FQ(10)
+    expected = 0
+    fp_a_repr = _convert_int_to_fp_repr(fp_a)
+    fp_b_repr = _convert_int_to_fp_repr(fp_b)
+    actual = proxy_contract.functions.lgte(fp_a_repr, fp_b_repr).call()
+
+    print(f"actual: {actual}")
+    print(f"expected: {expected}")
+    assert expected == actual
+
 def test_bit_length_big(proxy_contract):
     FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
     fp_a = FQ(FQ.field_modulus-1)
@@ -108,6 +144,7 @@ def test_bit_length_medium_2(proxy_contract):
     print(f"expected: {expected}")
 
     assert expected == actual
+
 def test_bit_length_medium_1(proxy_contract):
     FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
     fp_a = FQ(UINT_MAX)
@@ -273,6 +310,32 @@ def test_lmul_medium_3(proxy_contract):
 
     assert expected == _convert_fp_to_int(actual)
 
+def test_lmul_medium_4(proxy_contract):
+    FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
+    fp_a, fp_b = FQ(UINT_MAX * 10), FQ(1)
+    expected = FQ(UINT_MAX*10)
+    fp_a_repr = _convert_int_to_fp_repr(fp_a)
+    fp_b_repr = _convert_int_to_fp_repr(fp_b)
+    actual = proxy_contract.functions.lmul(fp_a_repr, fp_b_repr).call()
+
+    print(f"actual: {_convert_fp_to_int(actual)}")
+    print(f"expected: {expected}")
+
+    assert expected == _convert_fp_to_int(actual)
+
+def test_lmul_medium_5(proxy_contract):
+    FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
+    fp_a, fp_b = FQ(1), FQ(UINT_MAX * 10)
+    expected = FQ(UINT_MAX*10)
+    fp_a_repr = _convert_int_to_fp_repr(fp_a)
+    fp_b_repr = _convert_int_to_fp_repr(fp_b)
+    actual = proxy_contract.functions.lmul(fp_a_repr, fp_b_repr).call()
+
+    print(f"actual: {_convert_fp_to_int(actual)}")
+    print(f"expected: {expected}")
+
+    assert expected == _convert_fp_to_int(actual)
+
 def test_lmul_big(proxy_contract):
     FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
     fp_a, fp_b = FQ(UINT_MAX), FQ(0xf12387)
@@ -316,12 +379,15 @@ def test_lmod_field_multiple_medium_1(proxy_contract):
 def test_lmod_field_multiple_medium_2(proxy_contract):
     FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
     fp_a, fp_b = FQ(UINT_MAX * 10 + 10), FQ(UINT_MAX * 10)
+    # expected = FQ(1)
+    # fp_a, fp_b = FQ(UINT_MAX * 10 + 10), FQ(UINT_MAX * 10)
     expected = FQ(UINT_MAX*10)
 
     fp_a_repr = _convert_int_to_fp_repr(fp_a)
     fp_b_repr = _convert_int_to_fp_repr(fp_b)
     actual = proxy_contract.functions.lmod_field_multiple(fp_a_repr, fp_b_repr).call()
 
+    print(f"field_module_medium_2: uint_max: {UINT_MAX}")
     print(f"field_module_medium_2: actual: {_convert_fp_to_int(actual)}")
     print(f"field_module_medium_2: expected: {expected}")
 
@@ -564,7 +630,7 @@ def test_lsub_small(proxy_contract):
     print(f"expected: {expected}")
     assert expected == _convert_fp_to_int(actual)
 
-def test_lsub_medium(proxy_contract):
+def test_lsub_medium_1(proxy_contract):
     FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
     fp_a, fp_b = FQ(UINT_MAX * 2), FQ(UINT_MAX)
     expected = FQ(UINT_MAX)
@@ -572,6 +638,39 @@ def test_lsub_medium(proxy_contract):
     fp_b_repr = _convert_int_to_fp_repr(fp_b)
     actual = proxy_contract.functions.lsub(fp_a_repr, fp_b_repr).call()
 
+    print(f"actual: {_convert_fp_to_int(actual)}")
+    print(f"expected: {expected}")
+    assert expected == _convert_fp_to_int(actual)
+
+def test_lsub_medium_2(proxy_contract):
+    FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
+    fp_a, fp_b = FQ(UINT_MAX+1), FQ(UINT_MAX)
+    expected = FQ(1)
+    fp_a_repr = _convert_int_to_fp_repr(fp_a)
+    fp_b_repr = _convert_int_to_fp_repr(fp_b)
+    actual = proxy_contract.functions.lsub(fp_a_repr, fp_b_repr).call()
+    print(f"actual: {_convert_fp_to_int(actual)}")
+    print(f"expected: {expected}")
+    assert expected == _convert_fp_to_int(actual)
+
+def test_lsub_medium_3(proxy_contract):
+    FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
+    fp_a, fp_b = FQ(UINT_MAX*10), FQ(UINT_MAX*10)
+    expected = FQ(0)
+    fp_a_repr = _convert_int_to_fp_repr(fp_a)
+    fp_b_repr = _convert_int_to_fp_repr(fp_b)
+    actual = proxy_contract.functions.lsub(fp_a_repr, fp_b_repr).call()
+    print(f"actual: {_convert_fp_to_int(actual)}")
+    print(f"expected: {expected}")
+    assert expected == _convert_fp_to_int(actual)
+
+def test_lsub_medium_4(proxy_contract):
+    FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
+    fp_a, fp_b = FQ(UINT_MAX*10 + 10), FQ(UINT_MAX*10)
+    expected = FQ(10)
+    fp_a_repr = _convert_int_to_fp_repr(fp_a)
+    fp_b_repr = _convert_int_to_fp_repr(fp_b)
+    actual = proxy_contract.functions.lsub(fp_a_repr, fp_b_repr).call()
     print(f"actual: {_convert_fp_to_int(actual)}")
     print(f"expected: {expected}")
     assert expected == _convert_fp_to_int(actual)
@@ -586,6 +685,7 @@ def test_lsub_big(proxy_contract):
     print(f"actual: {_convert_fp_to_int(actual)}")
     print(f"expected: {expected}")
     assert expected == _convert_fp_to_int(actual)
+
 
 def test_add():
     FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab

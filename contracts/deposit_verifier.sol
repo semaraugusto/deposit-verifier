@@ -304,6 +304,11 @@ contract DepositVerifier  {
     function lmul(uint256 x, uint256 y) public pure returns (Fp memory result) { unchecked {
         uint r0;
         uint r1;
+        if(x == 1) {
+            return Fp(0, y);
+        } else if(y == 1) {
+            return Fp(0, x);
+        }
         assembly {
             let rem := mulmod(x, y, not(0))
             r0 := mul(x, y)
@@ -322,9 +327,11 @@ contract DepositVerifier  {
         uint yb = y.b;
         uint ya = y.a;
         Fp memory partial_res; 
+
         partial_res = lmul(xb, yb);
         r1_carry = partial_res.a;
         r0 = partial_res.b;
+
         partial_res = lmul(xa, ya);
         r1 = partial_res.b + r1_carry;
         require(partial_res.a == 0, "overflow");
@@ -354,8 +361,8 @@ contract DepositVerifier  {
         if(x.a > y.a) {
             return true;
         }
-        if(x.a >= y.a) {
-            if(x.a == y.a && x.b >= y.b){
+        else if(x.a == y.a) {
+            if(x.b >= y.b) {
                 return true;
             }
         }
