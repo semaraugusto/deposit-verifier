@@ -21,6 +21,7 @@ contract DepositVerifier  {
     struct Fp {
         uint a;
         uint b;
+        uint temp;
     }
 
     // Fp2 is an extension field element with the coefficient of the
@@ -304,6 +305,9 @@ contract DepositVerifier  {
     function lmul(uint256 x, uint256 y) public pure returns (Fp memory result) { unchecked {
         uint r0;
         uint r1;
+        if(x == 0 || y == 0) {
+            return Fp(0, 0);
+        }
         if(x == 1) {
             return Fp(0, y);
         } else if(y == 1) {
@@ -326,18 +330,12 @@ contract DepositVerifier  {
         uint xa = x.a;
         uint yb = y.b;
         uint ya = y.a;
-        Fp memory partial_res; 
-
-        partial_res = lmul(xb, yb);
-        r1_carry = partial_res.a;
-        r0 = partial_res.b;
-
-        partial_res = lmul(xa, ya);
-        r1 = partial_res.b + r1_carry;
-        require(partial_res.a == 0, "overflow");
-
-        /* return result; */
-        return Fp(r1, r0);
+        Fp memory result; 
+        result = ladd(result, shl(lmul(xb, yb), 0 * 256));
+        result = ladd(result, shl(lmul(xb, ya), 1 * 256));
+        result = ladd(result, shl(lmul(xa, yb), 1 * 256));
+        result = ladd(result, shl(lmul(xa, ya), 2 * 256));
+        return result;
     }
 
     function get_base_field() public pure returns (Fp memory) {
