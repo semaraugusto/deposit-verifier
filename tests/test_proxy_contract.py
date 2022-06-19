@@ -124,6 +124,21 @@ def test_div_small(proxy_contract):
 
     assert expected == _convert_fp_to_int(actual)
 
+def test_div_big(proxy_contract):
+    FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
+    fp_a, fp_b = FQ(UINT_MAX * 1_000_000_000), 1_000_000_000
+    expected = FQ(UINT_MAX)
+    fp_a_repr = _convert_int_to_fp_repr(fp_a)
+    fp_b_repr = _convert_int_to_fp_repr(fp_b)
+    actual = proxy_contract.functions.ldiv(fp_a_repr, fp_b_repr).call()
+
+    print(f"actual: {actual}")
+    print(f"actual: {_convert_fp_to_int(actual)}")
+    print(f"expected: {type(expected)}")
+    print(f"expected: {expected}")
+
+    assert expected == _convert_fp_to_int(actual)
+
 def test_shl_small(proxy_contract):
     FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
     fp_a, n = FQ(1), 10
@@ -151,6 +166,7 @@ def test_shl_medium(proxy_contract):
     print(f"expected: {expected}")
 
     assert expected == _convert_fp_to_int(actual)
+
 def test_lmul_small(proxy_contract):
     FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
     fp_a, fp_b = FQ(3), FQ(3)
@@ -172,12 +188,12 @@ def test_lmul_medium(proxy_contract):
     fp_a_repr = _convert_int_to_fp_repr(fp_a)
     fp_b_repr = _convert_int_to_fp_repr(fp_b)
     actual = proxy_contract.functions.lmul(fp_a_repr, fp_b_repr).call()
-
     print(f"actual: {actual}")
     print(f"actual: {_convert_fp_to_int(actual)}")
     print(f"expected: {type(actual)}")
 
     assert expected == _convert_fp_to_int(actual)
+
 def test_lmul_big(proxy_contract):
     FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
     fp_a, fp_b = FQ(UINT_MAX), FQ(0xf12387)
@@ -199,8 +215,6 @@ def test_ladd_fq2(proxy_contract):
     print(f"expected: {expected}")
     print(f"expected: {type(expected)}")
 
-    # aa, ab = fp_a
-    # ba, bb = fp_b
     print(f"fpa: {fp_a}")
     print(f"typeof fpa: {type(fp_a)}")
     print(f"fpb: {fp_b}")
@@ -210,15 +224,8 @@ def test_ladd_fq2(proxy_contract):
     actual = proxy_contract.functions.ladd(fp_a_repr, fp_b_repr).call()
     print(f"actual: {actual}")
     actual = tuple(_convert_fp_to_int(fp2_repr) for fp2_repr in actual)
-    # expected = tuple(_convert_fp2_to_int(fp2_repr) for fp2_repr in expected)
-    # actual_a, actual_b = actual
-    # expected_a, expected_b = expected
-
-    # print(f"actual: {_convert_fp_to_int(actual)}")
-    # print(f"expected: {type(actual)}")
 
     assert expected == actual
-
 
 def test_ladd_big(proxy_contract):
     FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
@@ -241,6 +248,7 @@ def test_ladd_big(proxy_contract):
 
     print(f"actual: {actual}")
     print(f"expected: {type(actual)}")
+    assert expected == _convert_fp_to_int(actual)
 
 def test_ladd_medium(proxy_contract):
     FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
@@ -352,6 +360,7 @@ def test_lsub_big(proxy_contract):
     print(f"actual: {actual}")
     print(f"actual: {_convert_fp_to_int(actual)}")
     print(f"expected: {type(actual)}")
+    assert expected == _convert_fp_to_int(actual)
 
 def test_add():
     FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
@@ -394,14 +403,6 @@ def test_map_to_curve_matches_spec(proxy_contract, signing_root):
         for fp2_repr in computed_second_group_element_parts
     )
     assert computed_second_group_element == second_group_element
-
-# def test_add(proxy_contract, signing_root, dst):
-#     P1 = proxy_contract.functions.hashToCurve(signing_root).call()
-#     converted_result = tuple(_convert_fp2_to_int(fp2_repr) for fp2_repr in result)
-#
-#     spec_result = normalize(hash_to_G2(signing_root, dst, hashlib.sha256))
-#
-#     assert converted_result == spec_result
 
 def test_hash_g2_is_zero(proxy_contract, signing_root, dst):
     
