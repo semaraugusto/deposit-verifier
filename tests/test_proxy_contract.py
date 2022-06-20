@@ -648,6 +648,37 @@ def test_lmod_medium_3(proxy_contract):
     assert expected == _convert_fp_to_int(actual)
 
 # @pytest.mark.skip(reason="no way of currently testing this")
+def test_lmod_big_1(proxy_contract):
+    FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
+    fp_a, fp_b = FQ(FQ.field_modulus-2), FQ(FQ.field_modulus-1)
+    expected = fp_a
+
+    fp_a_repr = _convert_int_to_fp_repr(fp_a)
+    fp_b_repr = _convert_int_to_fp_repr(fp_b)
+    actual = proxy_contract.functions.lmod(fp_a_repr, fp_b_repr).call()
+
+    print(f"actual: {_convert_fp_to_int(actual)}")
+    print(f"expected: {expected}")
+
+    assert expected == _convert_fp_to_int(actual)
+
+# @pytest.mark.skip(reason="no way of currently testing this")
+def test_lmod_big_2(proxy_contract):
+    FQ.field_modulus = 0xfa0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
+    field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
+    fp_a, fp_b = FQ(field_modulus+2), FQ(field_modulus)
+    expected = FQ(2)
+
+    fp_a_repr = _convert_int_to_fp_repr(fp_a)
+    fp_b_repr = _convert_int_to_fp_repr(fp_b)
+    actual = proxy_contract.functions.lmod(fp_a_repr, fp_b_repr).call()
+
+    print(f"actual: {_convert_fp_to_int(actual)}")
+    print(f"expected: {expected}")
+
+    assert expected == _convert_fp_to_int(actual)
+
+# @pytest.mark.skip(reason="no way of currently testing this")
 def test_lmod_base_field(proxy_contract):
     FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
     fp_a, fp_b = FQ((FQ.field_modulus-1)*5 + 100), FQ(FQ.field_modulus-1)
@@ -660,8 +691,39 @@ def test_lmod_base_field(proxy_contract):
     print(f"expected: {expected}")
     assert expected == _convert_fp_to_int(actual)
 
-@pytest.mark.skip(reason="no way of currently testing this")
+
+# @pytest.mark.skip(reason="no way of currently testing this")
+def test_ladd_big_1(proxy_contract):
+    FQ.field_modulus = 0xfa0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
+    field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
+    fp_a, fp_b = FQ(field_modulus - 2), FQ(100)
+    expected = FQ(98)
+    fp_a_repr = _convert_int_to_fp_repr(fp_a)
+    fp_b_repr = _convert_int_to_fp_repr(fp_b)
+    actual = proxy_contract.functions.ladd(fp_a_repr, fp_b_repr).call()
+
+    print(f"actual: {_convert_fp_to_int(actual)}")
+    print(f"fp_a big1: {_convert_fp_to_int(fp_a_repr)}")
+    print(f"expected: {expected}")
+    assert expected == _convert_fp_to_int(actual)
+
+# @pytest.mark.skip(reason="no way of currently testing this")
 def test_ladd_big_2(proxy_contract):
+    FQ.field_modulus = 0xfa0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
+    field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
+    fp_a, fp_b = FQ(100), FQ(field_modulus - 2)
+    expected = FQ(98)
+    fp_a_repr = _convert_int_to_fp_repr(fp_a)
+    fp_b_repr = _convert_int_to_fp_repr(fp_b)
+    actual = proxy_contract.functions.ladd(fp_a_repr, fp_b_repr).call()
+
+    print(f"actual: {_convert_fp_to_int(actual)}")
+    print(f"expected: {expected}")
+    print(f"fp_b big2: {_convert_fp_to_int(fp_b_repr)}")
+    assert expected == _convert_fp_to_int(actual)
+
+@pytest.mark.skip(reason="no way of currently testing this")
+def test_ladd_big_3(proxy_contract):
     FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
     fp_a, fp_b = FQ(100+FQ.field_modulus-1), FQ(FQ.field_modulus-10)
     expected = FQ(90)
@@ -672,28 +734,12 @@ def test_ladd_big_2(proxy_contract):
     print(f"actual: {_convert_fp_to_int(actual)}")
     print(f"expected: {expected}")
     assert expected == _convert_fp_to_int(actual)
-
-@pytest.mark.skip(reason="no way of currently testing this")
-def test_ladd_big_1(proxy_contract):
-    FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
-    fp_a, fp_b = FQ(100), FQ(FQ.field_modulus-2)
-    actual = FQ(fp_a + fp_b)
-    expected = FQ(98)
-    assert actual == expected
-    fp_a_repr = _convert_int_to_fp_repr(fp_a)
-    fp_b_repr = _convert_int_to_fp_repr(fp_b)
-    actual = proxy_contract.functions.ladd(fp_a_repr, fp_b_repr).call()
-
-    print(f"actual: {_convert_fp_to_int(actual)}")
-    print(f"expected: {expected}")
-    assert expected == _convert_fp_to_int(fp_b_repr)
-
 # @pytest.mark.skip(reason="no way of currently testing this")
-def test_ladd_big_3(proxy_contract):
+def test_ladd_big_4(proxy_contract):
     FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
-    fp_a, fp_b = FQ(1), FQ(FQ.field_modulus-1)
+    fp_a, fp_b = FQ(2), FQ(FQ.field_modulus-1)
     actual = FQ(fp_a + fp_b)
-    expected = FQ(0)
+    expected = FQ(1)
     assert actual == expected
     fp_a_repr = _convert_int_to_fp_repr(fp_a)
     fp_b_repr = _convert_int_to_fp_repr(fp_b)
@@ -701,8 +747,22 @@ def test_ladd_big_3(proxy_contract):
     print(f"actual: {_convert_fp_to_int(actual)}")
     print(f"expected: {expected}")
     print(f"expected: {_convert_fp_to_int(fp_b_repr)}")
-    assert _convert_fp_to_int(actual) == FQ.field_modulus
+    # assert _convert_fp_to_int(actual- 1) == FQ.field_modulus - 1
     assert expected != _convert_fp_to_int(actual)
+
+def test_ladd_big_5(proxy_contract):
+    FQ.field_modulus = 0xfa0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
+    field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
+    fp_a, fp_b = FQ(1), FQ(field_modulus-1)
+    expected = FQ(0)
+    fp_a_repr = _convert_int_to_fp_repr(fp_a)
+    fp_b_repr = _convert_int_to_fp_repr(fp_b)
+    actual = proxy_contract.functions.ladd(fp_a_repr, fp_b_repr).call()
+    print(f"actual: {_convert_fp_to_int(actual)}")
+    print(f"expected: {expected}")
+    print(f"field_modulus: {_convert_fp_to_int(fp_b_repr)}")
+    # assert _convert_fp_to_int(actual) == field_modulus
+    assert expected == _convert_fp_to_int(actual)
 
 def test_ladd_medium(proxy_contract):
     FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab

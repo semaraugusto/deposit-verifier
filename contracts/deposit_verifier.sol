@@ -365,8 +365,9 @@ contract DepositVerifier  {
             Fp memory partial_res = ldiv(x, p);
             partial_res = lmul(partial_res, p);
             return lsub(x, partial_res);
+        } else {
+            return x;
         }
-        return x;
     }
 
     function leq(Fp memory x, Fp memory y) public pure returns (bool) {
