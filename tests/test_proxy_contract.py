@@ -441,6 +441,37 @@ def test_ladd_fq2(proxy_contract):
 
     assert expected == actual
 
+def test_lpow_as_mod(proxy_contract):
+    FQ.field_modulus = 0xfa0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
+    field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
+    fp = FQ(field_modulus + 1)
+    expected = FQ(1)
+    fp_repr = _convert_int_to_fp_repr(fp)
+    actual = proxy_contract.functions.lpow(fp_repr, 1).call()
+    actual = _convert_fp_to_int(actual)
+
+    print(f"actual: {type(actual)}")
+    print(f"actual: {actual}")
+    print(f"expected: {expected}")
+
+    assert expected == actual
+
+def test_lpow_small_exp_2(proxy_contract):
+    FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
+    fp = FQ(FQ.field_modulus - 1)
+    expected = FQ(fp)
+    fp_repr = _convert_int_to_fp_repr(fp)
+    actual = proxy_contract.functions.lpow(fp_repr, 1).call()
+    actual = _convert_fp_to_int(actual)
+
+    # print(f"actual: {_convert_fp_to_int(actual)}")
+    # print(f"actual: {actual}")
+    print(f"actual: {type(actual)}")
+    print(f"actual: {actual}")
+    print(f"expected: {expected}")
+
+    assert expected == actual
+
 def test_lsquare_small_1(proxy_contract):
     FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
     fp = FQ(10)
@@ -564,82 +595,26 @@ def test_lsquare_big_2(proxy_contract):
 
 # @pytest.mark.skip(reason="no way of currently testing this")
 def test_ladd_G2_1(proxy_contract, signing_root, dst):
-    expected = proxy_contract.functions.hashToCurve(signing_root).call()
+    expected1 = proxy_contract.functions.hashToCurve(signing_root).call()
     points = proxy_contract.functions.signature_to_g2_points(signing_root).call()
-    expected = tuple(_convert_fp2_to_int(fp2_repr) for fp2_repr in expected)
-    spec_result = normalize(hash_to_G2(signing_root, dst, hashlib.sha256))
+    expected = tuple(_convert_fp2_to_int(fp2_repr) for fp2_repr in expected1)
+    # spec_result = normalize(hash_to_G2(signing_root, dst, hashlib.sha256))
     # expected1 = tuple(_convert_fp2_to_int(fp2_repr) for fp2_repr in expected1)
     first_g2 = points[0]
     second_g2 = points[1]
-    print(f"expected: {expected}")
-    print(f"actual: {spec_result}")
-    actual = proxy_contract.functions.addG2NoPrecompile(first_g2, second_g2).call()
-    converted_actual = tuple(_convert_fp2_to_int(fp2_repr) for fp2_repr in actual)
+    # print(f"expected: {expected}")
+    # print(f"actual: {spec_result}")
+    actual1 = proxy_contract.functions.addG2NoPrecompile(first_g2, second_g2).call()
+    actual = tuple(_convert_fp2_to_int(fp2_repr) for fp2_repr in actual1)
 
-    print(f"actual: {actual}")
-    print(f"converted_actual: {converted_actual}")
-    print(f"expected: {expected}")
-    print(f"expected: {type(expected)}")
-    assert converted_actual == expected
-
-def test_lmod_field_multiple_medium_1(proxy_contract):
-    FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
-    fp_a, fp_b = FQ(UINT_MAX * 10 + 10), FQ(UINT_MAX)
-    expected = FQ(UINT_MAX*10)
-
-    fp_a_repr = _convert_int_to_fp_repr(fp_a)
-    fp_b_repr = _convert_int_to_fp_repr(fp_b)
-    actual = proxy_contract.functions.lmod_field_multiple(fp_a_repr, fp_b_repr).call()
-
-    print(f"actual: {_convert_fp_to_int(actual)}")
-    print(f"expected: {expected}")
-
-    assert expected == _convert_fp_to_int(actual)
-
-def test_lmod_field_multiple_medium_2(proxy_contract):
-    FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
-    fp_a, fp_b = FQ(UINT_MAX * 10 + 10), FQ(UINT_MAX * 10)
-    # expected = FQ(1)
-    # fp_a, fp_b = FQ(UINT_MAX * 10 + 10), FQ(UINT_MAX * 10)
-    expected = FQ(UINT_MAX*10)
-
-    fp_a_repr = _convert_int_to_fp_repr(fp_a)
-    fp_b_repr = _convert_int_to_fp_repr(fp_b)
-    actual = proxy_contract.functions.lmod_field_multiple(fp_a_repr, fp_b_repr).call()
-
-    print(f"field_module_medium_2: uint_max: {UINT_MAX}")
-    print(f"field_module_medium_2: actual: {_convert_fp_to_int(actual)}")
-    print(f"field_module_medium_2: expected: {expected}")
-
-    assert expected == _convert_fp_to_int(actual)
-
-def test_lmod_field_multiple_small_1(proxy_contract):
-    FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
-    fp_a, fp_b = FQ(30), FQ(10)
-    expected = FQ(30)
-
-    fp_a_repr = _convert_int_to_fp_repr(fp_a)
-    fp_b_repr = _convert_int_to_fp_repr(fp_b)
-    actual = proxy_contract.functions.lmod_field_multiple(fp_a_repr, fp_b_repr).call()
-
-    print(f"actual: {_convert_fp_to_int(actual)}")
-    print(f"expected: {expected}")
-
-    assert expected == _convert_fp_to_int(actual)
-
-def test_lmod_field_multiple_small_2(proxy_contract):
-    FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
-    fp_a, fp_b = FQ(31), FQ(10)
-    expected = FQ(30)
-
-    fp_a_repr = _convert_int_to_fp_repr(fp_a)
-    fp_b_repr = _convert_int_to_fp_repr(fp_b)
-    actual = proxy_contract.functions.lmod_field_multiple(fp_a_repr, fp_b_repr).call()
-
-    print(f"actual: {_convert_fp_to_int(actual)}")
-    print(f"expected: {expected}")
-
-    assert expected == _convert_fp_to_int(actual)
+    # print(f"actual: {actual}")
+    # print(f"actual: {actual}")
+    for i ,v in enumerate(actual1):
+        print(f"actual {i}: {v}")
+    # print(f"expected: {expected}")
+    for i ,v in enumerate(expected1):
+        print(f"expected {i}: {v}")
+    assert actual == expected
 
 def test_lmod_small_7(proxy_contract):
     FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab

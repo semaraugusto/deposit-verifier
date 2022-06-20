@@ -329,21 +329,29 @@ contract DepositVerifier  {
         }
         return Fp(r1, r0);
     }}
-    function lmul(Fp2 memory x, Fp2 memory y) public pure returns (Fp2 memory) {
+
+    function lmul(Fp2 memory x, Fp2 memory y) public view returns (Fp2 memory) {
         Fp memory r1 = lmul(x.a, y.a); 
         Fp memory r0 = lmul(x.b, y.b); 
         return Fp2(r1, r0);
     }
-    function lmul(Fp2 memory x, uint scalar) public pure returns (Fp2 memory) {
+    function lmul(Fp2 memory x, uint scalar) public view returns (Fp2 memory) {
         Fp memory scalar_point = Fp(0, scalar);
         Fp memory r1 = lmul(x.a, scalar_point); 
         Fp memory r0 = lmul(x.b, scalar_point); 
         return Fp2(r1, r0);
     }
+    /* function lmul(Fp2 memory x, Fp2 memory y) public view returns (Fp2 memory) { */
+    /*     Fp memory p1 = lmul(x.a, y.a); */
+    /*     Fp memory p0 = lmul(x.b, y.b); */
+    /*     return Fp2(p1, p0); */
+    /**/
+    /* } */
 
-    function lmul(Fp memory x, Fp memory y) public pure returns (Fp memory) {
+    function lmul(Fp memory x, Fp memory y) public view returns (Fp memory) {
         uint r0;
         uint r1;
+        uint r2;
         Fp memory p1; 
         Fp memory p2; 
         Fp memory p3; 
@@ -356,48 +364,69 @@ contract DepositVerifier  {
 
         p2 = lmul(x.a, y.b);
         r1 = r1 + p2.b;
-        require(p2.a == 0, "overflow");
+        r2 = p2.a;
 
         p3 = lmul(x.b, y.a);
         r1 = r1 + p3.a;
         p4 = lmul(x.a, y.a);
         r1 = r1 + p3.b;
-        require(p4.a == 0, "overflow");
+        r2 = r2 + p4.a;
 
-        return Fp(r1, r0);
+        Fp memory result = Fp(r1, r0);
+        Fp memory base_field = get_base_field();
+        if(r2 == 0 && lgte(result, base_field)) {
+            return result;
+        }
+
+        uint length;
+        bytes memory data;
+        uint exponent = 1;
+        if(r2 > 0) {
+            length = 96;
+            data = abi.encodePacked([r2, r1, r0]);
+            /* return expmod(data, 1, length); */
+            /* return res */
+        } else {
+            length = 64;
+            data = abi.encodePacked([r1, r0]);
+        }
+
+        return expmod(data, exponent, length);
     }
 
-
-    /* function lpow(Fp memory x, uint32 exponent) public pure returns (Fp memory) { */
+    /* function lmul(Fp memory x, Fp memory y) public view returns (Fp memory) { */
     /*     uint r0; */
     /*     uint r1; */
+    /*     Fp memory p1;  */
+    /*     Fp memory p2;  */
+    /*     Fp memory p3;  */
+    /*     Fp memory p4;  */
     /**/
-    /*     uint base_length = bitLength(x); */
-    /*     uint32 exponent_length = 32; */
-    /*     uint modulus_length = 48; */
-    /*     bytes memory number = abi.encodePacked([x.a, x.b]); */
-    /*     bytes memory modulus = abi.encodePacked([BLS_BASE_FIELD_A, BLS_BASE_FIELD_B]); */
+    /*     p1 = lmul(x.b, y.b); */
     /**/
-    /*     bytes memory = abi.encodePacked([ */
-    /*         base_length, */
-    /*         exponent_length, */
-    /*         modulus_length, */
-    /*         number, */
-    /*         exponent, */
-    /*         modulus */
-    /*     ]); */
+    /*     r0 = p1.b; */
+    /*     r1 = p1.a; */
     /**/
+    /*     p2 = lmul(x.a, y.b); */
+    /*     r1 = r1 + p2.b; */
+    /*     require(p2.a == 0, "overflow"); */
     /**/
+    /*     p3 = lmul(x.b, y.a); */
+    /*     r1 = r1 + p3.a; */
+    /*     p4 = lmul(x.a, y.a); */
+    /*     r1 = r1 + p3.b; */
+    /*     require(p4.a == 0, "overflow"); */
+    /**/
+    /*     Fp memory result = Fp(r1, r0); */
+    /*     Fp memory base_field= get_base_field(); */
+    /*     return lpow(result, 1); */
     /*     return Fp(r1, r0); */
     /* } */
-    /* function lsquare(Fp memory x) public view returns (Fp memory result) { */
+
     function lsquare(Fp2 memory x) public view returns (Fp2 memory) {
-        Fp memory p1 = x.a;
-        Fp memory p2 = x.b;
-        p1 = lpow(p1, 2);
-        p2 = lpow(p2, 2);
+        Fp memory p1 = lpow(x.a, 2);
+        Fp memory p2 = lpow(x.b, 2);
         return Fp2(p1, p2);
-        /* return lpow(x, 2); */
     }
     function lsquare(Fp memory x) public view returns (Fp memory) {
         return lpow(x, 2);
@@ -476,11 +505,7 @@ contract DepositVerifier  {
         return Fp(BLS_BASE_FIELD_A, BLS_BASE_FIELD_B);
     }
 
-    function lmod_field_multiple(Fp memory x, Fp memory p) public pure returns (Fp memory) {
-            Fp memory partial_res = ldiv(x, p);
-            return lmul(partial_res, p);
-    }
-    function lmod(Fp memory x, Fp memory p) public pure returns (Fp memory) {
+    function lmod(Fp memory x, Fp memory p) public view returns (Fp memory) {
         if (lgte(x, p)) {
             Fp memory partial_res = ldiv(x, p);
             partial_res = lmul(partial_res, p);
@@ -557,7 +582,7 @@ contract DepositVerifier  {
         return Fp(r1, r0);
     }}
 
-    function ldiv(Fp memory x, Fp memory y) public pure returns (Fp memory) { unchecked {
+    function ldiv(Fp memory x, Fp memory y) public view returns (Fp memory) { unchecked {
         require((y.a != 0 || y.b != 0), "division by zero");
         if((x.a == y.a) && (x.b == y.b)) {
             return Fp(0, 1);
@@ -609,7 +634,7 @@ contract DepositVerifier  {
         return (z, cast(z > x));
     }}
 
-    function ladd(Fp memory x, Fp memory y) public pure returns (Fp memory) { unchecked {
+    function ladd(Fp memory x, Fp memory y) public view returns (Fp memory) { unchecked {
         uint r0;
         uint r1;
         uint carry;
@@ -623,7 +648,7 @@ contract DepositVerifier  {
         /* return result; */
     }}
 
-    function ladd(Fp2 memory x, Fp2 memory y) public pure returns (Fp2 memory) { unchecked {
+    function ladd(Fp2 memory x, Fp2 memory y) public view returns (Fp2 memory) { unchecked {
         Fp memory a = ladd(x.a, y.a);
         Fp memory b = ladd(x.b, y.b);
         return Fp2(a, b);
@@ -642,15 +667,8 @@ contract DepositVerifier  {
         return (z, cast(z < x));
     }}
 
-    function ldouble(Fp memory x) public pure returns (Fp memory) {unchecked {
+    function ldouble(Fp memory x) public view returns (Fp memory) {unchecked {
         return ladd(x, x);
-    }}
-
-    function ldouble(Fp2 memory x) public pure returns (Fp2 memory) {unchecked {
-
-         Fp memory a = ldouble(x.a);
-         Fp memory b = ldouble(x.b);
-         return Fp2(a, b);
     }}
 
     // This function is being used for testing purposes. 
@@ -669,7 +687,7 @@ contract DepositVerifier  {
         Fp2 memory H = lsub(b.X, a.X);
         Fp2 memory HH = lsquare(H);
         Fp2 memory I = lmul(HH, 4);
-        /* Fp2 memory J = lmul(H, I); */
+        Fp2 memory J = lmul(H, I);
         /* Fp2 memory r = lmul(lsub(b.Y, a.Y), 2); */
         /* Fp2 memory V = lmul(a.X, I); */
         /* X = lsub(lsub(lsquare(r), J), lmul(V, 2)); */
