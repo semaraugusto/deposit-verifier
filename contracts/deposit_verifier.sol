@@ -323,30 +323,24 @@ contract DepositVerifier  {
     function lmul(Fp memory x, Fp memory y) public pure returns (Fp memory) {
         uint r0;
         uint r1;
-        uint xb = x.b;
-        uint xa = x.a;
-        uint yb = y.b;
-        uint ya = y.a;
         Fp memory p1; 
         Fp memory p2; 
         Fp memory p3; 
         Fp memory p4; 
-        /* Fp memory result;  */
 
-        p1 = lmul(xb, yb);
+        p1 = lmul(x.b, y.b);
 
         r0 = p1.b;
         r1 = p1.a;
 
-        p2 = lmul(xa, yb);
+        p2 = lmul(x.a, y.b);
         r1 = r1 + p2.b;
         require(p2.a == 0, "overflow");
 
-        p3 = lmul(xb, ya);
+        p3 = lmul(x.b, y.a);
         r1 = r1 + p3.a;
-        p4 = lmul(xa, ya);
+        p4 = lmul(x.a, y.a);
         r1 = r1 + p3.b;
-        /* r1 = r1 + p4.b; */
         require(p4.a == 0, "overflow");
 
         return Fp(r1, r0);
@@ -470,13 +464,8 @@ contract DepositVerifier  {
         uint r0;
         uint r1;
         uint carry = 0;
-        uint xb = x.b;
-        uint xa = x.a;
-        uint yb = y.b;
-        uint ya = y.a;
-
-        (r0, carry) = lsub(xb, yb, carry);
-        (r1, carry) = lsub(xa, ya, carry);
+        (r0, carry) = lsub(x.b, y.b, carry);
+        (r1, carry) = lsub(x.a, y.a, carry);
         require(carry == 0, "underflow");
         return Fp(r1, r0);
     }}
@@ -495,35 +484,22 @@ contract DepositVerifier  {
     }}
 
     function ladd(Fp memory x, Fp memory y) public pure returns (Fp memory) { unchecked {
-
         uint r0;
         uint r1;
-        uint r0_a;
         uint carry;
-        uint xb = x.b;
-        uint xa = x.a;
-        uint yb = y.b;
-        uint ya = y.a;
-
-        (r0, carry) = add(xb, yb, carry);
-        (r1, carry) = add(xa, ya, carry);
+        (r0, carry) = add(x.b, y.b, carry);
+        (r1, carry) = add(x.a, y.a, carry);
         require(carry == 0, "overflow");
-
-        /* result[max.length] = carry; */
-
 
         Fp memory result = Fp(r1, r0);
         Fp memory base_field = get_base_field();
         return lmod(result, base_field);
-        return result;
+        /* return result; */
     }}
 
     function ladd(Fp2 memory x, Fp2 memory y) public pure returns (Fp2 memory) { unchecked {
-        Fp memory base_field = get_base_field();
         Fp memory a = ladd(x.a, y.a);
-        a = lmod(a, base_field);
         Fp memory b = ladd(x.b, y.b);
-        b = lmod(b, base_field);
         return Fp2(a, b);
     }}
 
@@ -553,8 +529,8 @@ contract DepositVerifier  {
 
     // This function is being used for testing purposes. 
     function addG2NoPrecompile(G2Point memory a, G2Point memory b) public pure returns (G2Point memory) {
-        if(G2_isZeroNoPrecompile(a.X, a.Y)) { return b; }
-        if (G2_isZeroNoPrecompile(b.X, b.Y)) { return a; }
+        /* if(G2_isZeroNoPrecompile(a.X, a.Y)) { return b; } */
+        /* if (G2_isZeroNoPrecompile(b.X, b.Y)) { return a; } */
         Fp2 memory X = ladd(a.X, b.X);
         Fp2 memory Y = ladd(a.Y, b.Y);
 
@@ -608,6 +584,12 @@ contract DepositVerifier  {
                 Fp(output[6], output[7])
             )
         );
+    }
+    function signature_to_g2_points(bytes32 message) public view returns (G2Point memory, G2Point memory) {
+        Fp2[2] memory messageElementsInField = hashToField(message);
+        G2Point memory firstPoint = mapToCurve(messageElementsInField[0]);
+        G2Point memory secondPoint = mapToCurve(messageElementsInField[1]);
+        return (firstPoint, secondPoint);
     }
 
     // Implements "hash to the curve" from the IETF BLS draft.
