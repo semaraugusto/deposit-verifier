@@ -21,7 +21,6 @@ contract DepositVerifier  {
     struct Fp {
         uint a;
         uint b;
-        uint temp;
     }
 
     // Fp2 is an extension field element with the coefficient of the
@@ -330,12 +329,29 @@ contract DepositVerifier  {
         uint xa = x.a;
         uint yb = y.b;
         uint ya = y.a;
+        Fp memory p1; 
+        Fp memory p2; 
+        Fp memory p3; 
+        Fp memory p4; 
         Fp memory result; 
-        result = ladd(result, shl(lmul(xb, yb), 0 * 256));
-        result = ladd(result, shl(lmul(xb, ya), 1 * 256));
-        result = ladd(result, shl(lmul(xa, yb), 1 * 256));
-        result = ladd(result, shl(lmul(xa, ya), 2 * 256));
-        return result;
+
+        p1 = lmul(xb, yb);
+
+        r0 = p1.b;
+        r1 = p1.a;
+
+        p2 = lmul(xa, yb);
+        r1 = r1 + p2.b;
+        require(p2.a == 0, "overflow");
+
+        p3 = lmul(xb, ya);
+        r1 = r1 + p3.a;
+        p4 = lmul(xa, ya);
+        r1 = r1 + p3.b;
+        /* r1 = r1 + p4.b; */
+        require(p4.a == 0, "overflow");
+
+        return Fp(r1, r0);
     }
 
     function get_base_field() public pure returns (Fp memory) {
