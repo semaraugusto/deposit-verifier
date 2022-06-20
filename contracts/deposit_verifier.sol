@@ -209,6 +209,11 @@ contract DepositVerifier  {
         return result;
     }
 
+    function convertSliceToFpUnchecked(bytes memory data) private pure returns (Fp memory result) {
+        uint a = sliceToUint(data, 0, 16);
+        uint b = sliceToUint(data, 16, 48);
+        return Fp(a, b);
+    }
     function convertSliceToFp(bytes memory data, uint start, uint end) private view returns (Fp memory result) {
         bytes memory fieldElement = reduceModulo(data, start, end);
         uint a = sliceToUint(fieldElement, 0, 16);
@@ -344,6 +349,79 @@ contract DepositVerifier  {
         require(p4.a == 0, "overflow");
 
         return Fp(r1, r0);
+    }
+
+    /* function lsquare(Fp memory x) public view returns (Fp memory result) { */
+    function lsquare(Fp memory x) public view returns (Fp memory) {
+        return lpow(x, 2);
+    }
+    function lpow(Fp memory x, uint exp) public view returns (Fp memory) {
+        uint r1 = x.a;
+        uint length = 32;
+        uint r0 = x.b;
+
+        if (r1 > 0) {
+            length = 64;
+            bytes memory data = abi.encodePacked([r1, r0]);
+            Fp memory result = expmod(data, exp, length);
+            return result;
+        }
+        bytes memory data = abi.encodePacked([r0]);
+        Fp memory result = expmod(data, exp, length);
+        return result;
+    }
+
+    function expmod(bytes memory data, uint exponent, uint length) private view returns (Fp memory) {
+        assert (length >= 0);
+        assert (length <= data.length);
+
+        bytes memory result = new bytes(48);
+
+        bool success;
+        assembly {
+            let p := mload(0x40)
+            // length of base
+            mstore(p, length)
+            // length of exponent
+            mstore(add(p, 0x20), 0x20)
+            // length of modulus
+            mstore(add(p, 0x40), 48)
+            // base
+            // first, copy slice by chunks of EVM words
+            let ctr := length
+            let src := add(add(data, 0x20), 0)
+            let dst := add(p, 0x60)
+            for { }
+                or(gt(ctr, 0x20), eq(ctr, 0x20))
+                { ctr := sub(ctr, 0x20) }
+            {
+                mstore(dst, mload(src))
+                dst := add(dst, 0x20)
+                src := add(src, 0x20)
+            }
+            // next, copy remaining bytes in last partial word
+            let mask := sub(exp(256, sub(0x20, ctr)), 1)
+            let srcpart := and(mload(src), not(mask))
+            let destpart := and(mload(dst), mask)
+            mstore(dst, or(destpart, srcpart))
+            // exponent
+            mstore(add(p, add(0x60, length)), exponent)
+            // modulus
+            let modulusAddr := add(p, add(0x60, add(0x10, length)))
+            mstore(modulusAddr, or(mload(modulusAddr), 0x1a0111ea397fe69a4b1ba7b6434bacd7)) // pt 1
+            mstore(add(p, add(0x90, length)), 0x64774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab) // pt 2
+            success := staticcall(
+                sub(gas(), 2000),
+                MOD_EXP_PRECOMPILE_ADDRESS,
+                p,
+                add(0xB0, length),
+                add(result, 0x20),
+                48)
+            // Use "invalid" to make gas estimation work
+            switch success case 0 { invalid() }
+        }
+        require(success, "call to modular exponentiation precompile failed");
+        return convertSliceToFpUnchecked(result);
     }
 
     function get_base_field() public pure returns (Fp memory) {
@@ -529,8 +607,10 @@ contract DepositVerifier  {
 
     // This function is being used for testing purposes. 
     function addG2NoPrecompile(G2Point memory a, G2Point memory b) public pure returns (G2Point memory) {
-        /* if(G2_isZeroNoPrecompile(a.X, a.Y)) { return b; } */
-        /* if (G2_isZeroNoPrecompile(b.X, b.Y)) { return a; } */
+        if(G2_isZeroNoPrecompile(a.X, a.Y)) { return b; }
+        if (G2_isZeroNoPrecompile(b.X, b.Y)) { return a; }
+
+        /* Fp memory H = lsub(b.X, a.X); */
         Fp2 memory X = ladd(a.X, b.X);
         Fp2 memory Y = ladd(a.Y, b.Y);
 

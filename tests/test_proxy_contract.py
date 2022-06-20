@@ -18,6 +18,8 @@ from py_ecc.optimized_bls12_381 import FQ2, normalize
 
 EMPTY_DEPOSIT_ROOT = "d70a234731285c6804c2a4f56711ddb8c82c99740f207854891028af34e27e5e"
 UINT_MAX = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+UINT_64_MAX = 18446744073709551615
+UINT_32_MAX = 18446744073709551615
 
 def test_compute_signing_root_matches_spec(
     proxy_contract, bls_public_key, withdrawal_credentials, deposit_amount, signing_root
@@ -427,6 +429,7 @@ def test_lmul_big_2(proxy_contract):
 
     assert expected == _convert_fp_to_int(actual)
 
+
 @pytest.mark.skip(reason="this is probably wrong")
 def test_ladd_fq2(proxy_contract):
     FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
@@ -440,6 +443,128 @@ def test_ladd_fq2(proxy_contract):
     print(f"expected: {expected}")
 
     assert expected == actual
+
+# @pytest.mark.skip(reason="no way of currently testing this")
+def test_lsquare_small_1(proxy_contract):
+    FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
+    fp = FQ(10)
+    expected = FQ(100)
+    fp_repr = _convert_int_to_fp_repr(fp)
+    actual = proxy_contract.functions.lsquare(fp_repr).call()
+
+    # print(f"actual: {_convert_fp_to_int(actual)}")
+    # print(f"actual: {actual}")
+    print(f"actual: {type(actual)}")
+    print(f"actual: {int.from_bytes(actual, 'big')}")
+    print(f"expected: {expected}")
+
+    assert expected == int.from_bytes(actual, 'big')
+
+# @pytest.mark.skip(reason="no way of currently testing this")
+def test_lsquare_small_2(proxy_contract):
+    FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
+    fp = FQ(2)
+    expected = FQ(4)
+    fp_repr = _convert_int_to_fp_repr(fp)
+    actual = proxy_contract.functions.lsquare(fp_repr).call()
+
+    # print(f"actual: {_convert_fp_to_int(actual)}")
+    # print(f"actual: {actual}")
+    print(f"actual: {type(actual)}")
+    print(f"actual: {int.from_bytes(actual, 'big')}")
+    print(f"expected: {expected}")
+
+    assert expected == int.from_bytes(actual, 'big')
+
+def test_lsquare_small_3(proxy_contract):
+    FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
+    fp = FQ(1)
+    expected = FQ(1)
+    fp_repr = _convert_int_to_fp_repr(fp)
+    actual = proxy_contract.functions.lsquare(fp_repr).call()
+
+    # print(f"actual: {_convert_fp_to_int(actual)}")
+    # print(f"actual: {actual}")
+    print(f"actual: {type(actual)}")
+    print(f"actual: {int.from_bytes(actual, 'big')}")
+    print(f"expected: {expected}")
+
+    assert expected == int.from_bytes(actual, 'big')
+
+def test_lsquare_medium_1(proxy_contract):
+    FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
+    fp = FQ(UINT_32_MAX)
+    expected = fp*fp
+    fp_repr = _convert_int_to_fp_repr(fp)
+    actual = proxy_contract.functions.lsquare(fp_repr).call()
+
+    # print(f"actual: {_convert_fp_to_int(actual)}")
+    # print(f"actual: {actual}")
+    print(f"actual: {type(actual)}")
+    print(f"expected: {expected}")
+
+    assert expected == _convert_fp_to_int(actual)
+
+def test_lsquare_medium_2(proxy_contract):
+    FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
+    fp = FQ(UINT_64_MAX)
+    expected = fp*fp
+    fp_repr = _convert_int_to_fp_repr(fp)
+    actual = proxy_contract.functions.lsquare(fp_repr).call()
+
+    print(f"actual: {_convert_fp_to_int(actual)}")
+    # print(f"actual: {actual}")
+    print(f"actual: {type(actual)}")
+    print(f"expected: {expected}")
+
+    assert expected == _convert_fp_to_int(actual)
+
+def test_lsquare_medium_3(proxy_contract):
+    FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
+    fp = FQ(UINT_MAX)
+    expected = fp*fp
+    fp_repr = _convert_int_to_fp_repr(fp)
+    actual = proxy_contract.functions.lsquare(fp_repr).call()
+
+    print(f"actual: {_convert_fp_to_int(actual)}")
+    # print(f"actual: {actual}")
+    print(f"actual: {type(actual)}")
+    print(f"expected: {expected}")
+
+    assert expected == _convert_fp_to_int(actual)
+
+def test_lsquare_big(proxy_contract):
+    FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
+    fp = FQ(FQ.field_modulus - 1)
+    expected = fp*fp
+    fp_repr = _convert_int_to_fp_repr(fp)
+    actual = proxy_contract.functions.lsquare(fp_repr).call()
+
+    print(f"actual: {_convert_fp_to_int(actual)}")
+    # print(f"actual: {actual}")
+    print(f"actual: {type(actual)}")
+    print(f"expected: {expected}")
+    print(f"expected: {expected}")
+    print(f"fq: {FQ.field_modulus}")
+
+    assert expected == _convert_fp_to_int(actual)
+
+def test_lsquare_big_2(proxy_contract):
+    FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
+    fp = FQ(FQ.field_modulus - 10)
+    expected = fp*fp
+    fp_repr = _convert_int_to_fp_repr(fp)
+    actual = proxy_contract.functions.lsquare(fp_repr).call()
+
+    print(f"actual: {_convert_fp_to_int(actual)}")
+    # print(f"actual: {actual}")
+    print(f"actual: {type(actual)}")
+    print(f"expected: {expected}")
+    print(f"expected: {expected}")
+    print(f"fq: {FQ.field_modulus}")
+    print(f"actual - fq: {_convert_fp_to_int(actual) - FQ.field_modulus}")
+
+    assert expected == _convert_fp_to_int(actual)
 
 @pytest.mark.skip(reason="no way of currently testing this")
 def test_ladd_fq2_partial_1(proxy_contract, signing_root, dst):
@@ -577,7 +702,6 @@ def test_lmod_field_multiple_medium_1(proxy_contract):
 
     assert expected == _convert_fp_to_int(actual)
 
-# @pytest.mark.skip(reason="no way of currently testing this")
 def test_lmod_field_multiple_medium_2(proxy_contract):
     FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
     fp_a, fp_b = FQ(UINT_MAX * 10 + 10), FQ(UINT_MAX * 10)
