@@ -323,8 +323,6 @@ contract DepositVerifier  {
     function lmul(Fp memory x, Fp memory y) public pure returns (Fp memory) {
         uint r0;
         uint r1;
-        uint r1_carry;
-        uint r2_carry;
         uint xb = x.b;
         uint xa = x.a;
         uint yb = y.b;
@@ -333,7 +331,7 @@ contract DepositVerifier  {
         Fp memory p2; 
         Fp memory p3; 
         Fp memory p4; 
-        Fp memory result; 
+        /* Fp memory result;  */
 
         p1 = lmul(xb, yb);
 
@@ -372,15 +370,33 @@ contract DepositVerifier  {
     }
 
     function lgte(Fp memory x, Fp memory y) public pure returns (bool) {
-        if(x.a > y.a) {
-            return true;
+        uint r0;
+        uint r1;
+        uint carry = 0;
+        (r0, carry) = lsub(x.b, y.b, carry);
+        (r1, carry) = lsub(x.a, y.a, carry);
+        // checking for overflow
+        if(carry != 0) {
+            return false;
         }
-        else if(x.a == y.a) {
-            if(x.b >= y.b) {
-                return true;
-            }
-        }
-        return false;
+        /* else { */
+        /*     // checking for overflow */
+        /*     if(r1 > x.a) { */
+        /*         return false; */
+        /*     } */
+        /*     if(r1 > 0) { */
+        /*         return true; */
+        /*     } */
+        /*     else if(r1 == 0) { */
+        /*         if(r0 > x.b) { */
+        /*             return false; */
+        /*         } */
+        /*         return true; */
+        /*     } */
+        /**/
+        /* } */
+        return true;
+
     }
     function bitLength(uint256 n) private pure returns (uint256) { unchecked {
         uint256 m;
@@ -508,17 +524,17 @@ contract DepositVerifier  {
             /* r0 := sub(r0, mul(div(r0, BLS_BASE_FIELD_B), BLS_BASE_FIELD_B)) */
         }
         Fp memory result = Fp(r1, r0);
-        Fp memory base_field = get_base_field();
-        if (lgte(result, base_field)) {
-            return lmod(result, base_field);
-        }
+        /* Fp memory base_field = get_base_field(); */
         return result;
         /* return lmod(result, get_base_field()); */
     }}
 
     function ladd(Fp2 memory x, Fp2 memory y) public pure returns (Fp2 memory) { unchecked {
+        Fp memory base_field = get_base_field();
         Fp memory a = ladd(x.a, y.a);
+        a = lmod(a, base_field);
         Fp memory b = ladd(x.b, y.b);
+        b = lmod(b, base_field);
         return Fp2(a, b);
     }}
 
