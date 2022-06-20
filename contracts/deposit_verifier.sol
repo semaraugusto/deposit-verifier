@@ -369,34 +369,30 @@ contract DepositVerifier  {
         return x;
     }
 
+    function leq(Fp memory x, Fp memory y) public pure returns (bool) {
+        return(x.a == y.a && x.b == y.b);
+    }
+
     function lgte(Fp memory x, Fp memory y) public pure returns (bool) {
         uint r0;
         uint r1;
         uint carry = 0;
-        (r0, carry) = lsub(x.b, y.b, carry);
         (r1, carry) = lsub(x.a, y.a, carry);
-        // checking for overflow
+        // if overflowed then its lt
         if(carry != 0) {
             return false;
         }
-        /* else { */
-        /*     // checking for overflow */
-        /*     if(r1 > x.a) { */
-        /*         return false; */
-        /*     } */
-        /*     if(r1 > 0) { */
-        /*         return true; */
-        /*     } */
-        /*     else if(r1 == 0) { */
-        /*         if(r0 > x.b) { */
-        /*             return false; */
-        /*         } */
-        /*         return true; */
-        /*     } */
-        /**/
-        /* } */
+        else if(r1 > 0) {
+            return true;
+        }
+        else if(r1 == 0) {
+            carry = 0;
+            (r0, carry) = lsub(x.b, y.b, carry);
+            if(carry != 0) {
+                return false;
+            }
+        }
         return true;
-
     }
     function bitLength(uint256 n) private pure returns (uint256) { unchecked {
         uint256 m;
@@ -524,9 +520,9 @@ contract DepositVerifier  {
             /* r0 := sub(r0, mul(div(r0, BLS_BASE_FIELD_B), BLS_BASE_FIELD_B)) */
         }
         Fp memory result = Fp(r1, r0);
-        /* Fp memory base_field = get_base_field(); */
-        return result;
-        /* return lmod(result, get_base_field()); */
+        Fp memory base_field = get_base_field();
+        return lmod(result, base_field);
+        /* return result; */
     }}
 
     function ladd(Fp2 memory x, Fp2 memory y) public pure returns (Fp2 memory) { unchecked {
