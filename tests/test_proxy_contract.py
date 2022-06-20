@@ -722,10 +722,10 @@ def test_ladd_big_2(proxy_contract):
     print(f"fp_b big2: {_convert_fp_to_int(fp_b_repr)}")
     assert expected == _convert_fp_to_int(actual)
 
-@pytest.mark.skip(reason="no way of currently testing this")
+# @pytest.mark.skip(reason="no way of currently testing this")
 def test_ladd_big_3(proxy_contract):
     FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
-    fp_a, fp_b = FQ(100+FQ.field_modulus-1), FQ(FQ.field_modulus-10)
+    fp_a, fp_b = FQ(100+FQ.field_modulus), FQ(FQ.field_modulus-10)
     expected = FQ(90)
     fp_a_repr = _convert_int_to_fp_repr(fp_a)
     fp_b_repr = _convert_int_to_fp_repr(fp_b)
@@ -748,7 +748,7 @@ def test_ladd_big_4(proxy_contract):
     print(f"expected: {expected}")
     print(f"expected: {_convert_fp_to_int(fp_b_repr)}")
     # assert _convert_fp_to_int(actual- 1) == FQ.field_modulus - 1
-    assert expected != _convert_fp_to_int(actual)
+    assert expected == _convert_fp_to_int(actual)
 
 def test_ladd_big_5(proxy_contract):
     FQ.field_modulus = 0xfa0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
@@ -926,7 +926,7 @@ def test_hash_to_curve_matches_spec(proxy_contract, signing_root, dst):
 
     assert converted_result == spec_result
 
-@pytest.mark.skip(reason="no way of currently testing this")
+# @pytest.mark.skip(reason="no way of currently testing this")
 def test_hash_to_curve_no_precompile_matches_spec(proxy_contract, signing_root, dst):
     result = proxy_contract.functions.hashToCurveNoPrecompile(signing_root).call()
     converted_result = tuple(_convert_fp2_to_int(fp2_repr) for fp2_repr in result)

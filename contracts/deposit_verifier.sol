@@ -491,7 +491,7 @@ contract DepositVerifier  {
 
     function lsub(uint256 x, uint256 y) private pure returns (uint256, uint256) { unchecked {
         uint256 z = x - y;
-        return (z, z > x ? 1 : 0);
+        return (z, cast(z > x));
     }}
 
     function ladd(Fp memory x, Fp memory y) public pure returns (Fp memory) { unchecked {
@@ -499,31 +499,23 @@ contract DepositVerifier  {
         uint r0;
         uint r1;
         uint r0_a;
-        uint carry_b;
+        uint carry;
         uint xb = x.b;
         uint xa = x.a;
         uint yb = y.b;
         uint ya = y.a;
-        assembly {
-            // add least significant bits
-            let rem_b := addmod(xb, yb, not(0))
-            r0 := add(xb, yb)
-            carry_b := sub(sub(rem_b, r0), lt(rem_b, r0))
 
-            // add more significant bits
-            let rem := addmod(xa, ya, not(0))
-            r0_a := add(xa, ya)
-            r1 := sub(sub(rem, r0_a), lt(rem, r0_a))
+        (r0, carry) = add(xb, yb, carry);
+        (r1, carry) = add(xa, ya, carry);
+        require(carry == 0, "overflow");
 
-            // add carry
-            r1 := add(r1, carry_b)
-            /* r1 := sub(r1, mul(div(r1, BLS_BASE_FIELD_A), BLS_BASE_FIELD_A)) */
-            /* r0 := sub(r0, mul(div(r0, BLS_BASE_FIELD_B), BLS_BASE_FIELD_B)) */
-        }
+        /* result[max.length] = carry; */
+
+
         Fp memory result = Fp(r1, r0);
         Fp memory base_field = get_base_field();
         return lmod(result, base_field);
-        /* return result; */
+        return result;
     }}
 
     function ladd(Fp2 memory x, Fp2 memory y) public pure returns (Fp2 memory) { unchecked {
@@ -533,6 +525,19 @@ contract DepositVerifier  {
         Fp memory b = ladd(x.b, y.b);
         b = lmod(b, base_field);
         return Fp2(a, b);
+    }}
+
+    function add(uint256 x, uint256 y, uint256 carry) private pure returns (uint256, uint256) { unchecked {
+        if (x < type(uint256).max)
+            return add(x + carry, y);
+        if (y < type(uint256).max)
+            return add(x, y + carry);
+        return (type(uint256).max - 1 + carry, 1);
+    }}
+
+    function add(uint256 x, uint256 y) private pure returns (uint256, uint256) { unchecked {
+        uint256 z = x + y;
+        return (z, cast(z < x));
     }}
 
     function ldouble(Fp memory x) public pure returns (Fp memory) {unchecked {
@@ -713,4 +718,8 @@ contract DepositVerifier  {
 
         return blsPairingCheck(publicKey, messageOnCurve, signature);
     }
+    function cast(bool b) private pure returns (uint256 u) { unchecked {
+        assembly { u := b }
+    }}
 }
+
