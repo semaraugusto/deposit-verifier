@@ -374,7 +374,6 @@ def test_lmul_medium_3(proxy_contract):
 
     assert expected == _convert_fp_to_int(actual)
 
-# @pytest.mark.skip(reason="no way of currently testing this")
 def test_lmul_medium_4(proxy_contract):
     FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
     fp_a, fp_b = FQ(UINT_MAX * 10), FQ(1)
@@ -388,7 +387,6 @@ def test_lmul_medium_4(proxy_contract):
 
     assert expected == _convert_fp_to_int(actual)
 
-# @pytest.mark.skip(reason="no way of currently testing this")
 def test_lmul_medium_5(proxy_contract):
     FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
     fp_a, fp_b = FQ(1), FQ(UINT_MAX * 10)
@@ -415,7 +413,6 @@ def test_lmul_big_1(proxy_contract):
 
     assert expected == _convert_fp_to_int(actual)
 
-# @pytest.mark.skip(reason="no way of currently testing this")
 def test_lmul_big_2(proxy_contract):
     FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
     fp_a, fp_b = FQ(UINT_MAX+10), FQ(0xf12387)
@@ -430,7 +427,7 @@ def test_lmul_big_2(proxy_contract):
     assert expected == _convert_fp_to_int(actual)
 
 
-@pytest.mark.skip(reason="this is probably wrong")
+# @pytest.mark.skip(reason="this is probably wrong")
 def test_ladd_fq2(proxy_contract):
     FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
     fp_a, fp_b = FQ2([FQ(1), FQ(1)]), FQ2([FQ(2), FQ(2)])
@@ -444,7 +441,6 @@ def test_ladd_fq2(proxy_contract):
 
     assert expected == actual
 
-# @pytest.mark.skip(reason="no way of currently testing this")
 def test_lsquare_small_1(proxy_contract):
     FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
     fp = FQ(10)
@@ -566,127 +562,25 @@ def test_lsquare_big_2(proxy_contract):
 
     assert expected == _convert_fp_to_int(actual)
 
-@pytest.mark.skip(reason="no way of currently testing this")
-def test_ladd_fq2_partial_1(proxy_contract, signing_root, dst):
-    expected1 = proxy_contract.functions.hashToCurve(signing_root).call()
+# @pytest.mark.skip(reason="no way of currently testing this")
+def test_ladd_G2_1(proxy_contract, signing_root, dst):
+    expected = proxy_contract.functions.hashToCurve(signing_root).call()
     points = proxy_contract.functions.signature_to_g2_points(signing_root).call()
-    converted_expected = tuple(_convert_fp2_to_int(fp2_repr) for fp2_repr in expected1)
+    expected = tuple(_convert_fp2_to_int(fp2_repr) for fp2_repr in expected)
     spec_result = normalize(hash_to_G2(signing_root, dst, hashlib.sha256))
     # expected1 = tuple(_convert_fp2_to_int(fp2_repr) for fp2_repr in expected1)
     first_g2 = points[0]
     second_g2 = points[1]
-    print(f"expected: {converted_expected}")
+    print(f"expected: {expected}")
     print(f"actual: {spec_result}")
-    # print(f"first_point: {first_point}")
-    first_g2_a = first_g2[0]
-    first_g2_a_a = first_g2_a[0]
-    first_g2_a_b = first_g2_a[1]
-    # first_g2_b = first_g2[1]
-    # first_g2_b_a = first_g2_b[0]
-    # first_g2_b_b = first_g2_b[1]
-    second_g2_a = second_g2[0]
-    second_g2_a_a = second_g2_a[0]
-    second_g2_a_b = second_g2_a[1]
-    # second_g2_b = second_g2[1]
-    # second_g2_b_a = second_g2_b[0]
-    # second_g2_b_b = second_g2_b[1]
-    print(f"first_point_g2_a_a: {first_g2_a_a}")
-    print(f"first_point_g2_a_b: {first_g2_a_b}")
-    # print(f"first_point_g2_b_a: {first_g2_b_a}")
-    # print(f"first_point_g2_b_b: {first_g2_b_b}")
+    actual = proxy_contract.functions.addG2NoPrecompile(first_g2, second_g2).call()
+    converted_actual = tuple(_convert_fp2_to_int(fp2_repr) for fp2_repr in actual)
 
-    print(f"second_point_g2_a_a: {second_g2_a_a}")
-    print(f"second_point_g2_a_b: {second_g2_a_b}")
-    # print(f"second_point_g2_b_a: {second_g2_b_a}")
-    # print(f"second_point_g2_b_b: {second_g2_b_b}")
-    actual = proxy_contract.functions.ladd(first_g2_a, second_g2_a).call()
-    converted_actual = tuple(_convert_fp_to_int(fp2_repr) for fp2_repr in actual)
-    # expected = first_g2_a + second_g2_a
-    
-    # expected_a = expected[0]
-    # expected_b = expected[1]
     print(f"actual: {actual}")
     print(f"converted_actual: {converted_actual}")
-    print(f"expected: {converted_expected}")
-    print(f"expected: {type(converted_expected)}")
-    # print(f"expected_a: {expected_a}")
-    # print(f"expected_b: {expected_b}")
-    # print(f"second_point: {second_point}")
-    assert converted_actual == converted_expected
-
-@pytest.mark.skip(reason="no way of currently testing this")
-def test_ladd_fq2_partial_2(proxy_contract, signing_root, dst):
-    result = proxy_contract.functions.hashToCurveNoPrecompile(signing_root).call()
-    expected1 = proxy_contract.functions.hashToCurve(signing_root).call()
-    points = proxy_contract.functions.signature_to_g2_points(signing_root).call()
-    converted_expected = tuple(_convert_fp2_to_int(fp2_repr) for fp2_repr in expected1)
-    converted_result = tuple(_convert_fp2_to_int(fp2_repr) for fp2_repr in result)
-    spec_result = normalize(hash_to_G2(signing_root, dst, hashlib.sha256))
-    first_g2 = points[0]
-    second_g2 = points[1]
-    print(f"expected: {converted_expected}")
-    print(f"actual: {spec_result}")
-    first_g2_b = first_g2[1]
-    first_g2_b_a = first_g2_b[0]
-    first_g2_b_b = first_g2_b[1]
-    second_g2_b = second_g2[1]
-    second_g2_b_a = second_g2_b[0]
-    second_g2_b_b = second_g2_b[1]
-    print(f"first_point_g2_a_a: {first_g2_b_a}")
-    print(f"first_point_g2_a_b: {first_g2_b_b}")
-
-    print(f"second_point_g2_a_a: {second_g2_b_a}")
-    print(f"second_point_g2_a_b: {second_g2_b_b}")
-    actual = proxy_contract.functions.ladd(first_g2_b, second_g2_b).call()
-    expected = first_g2_b + second_g2_b
-
-    print(f"actual: {actual}")
     print(f"expected: {expected}")
-    assert actual == expected
-
-@pytest.mark.skip(reason="no way of currently testing this")
-def test_ladd_fq2_partial_4(proxy_contract, signing_root, dst):
-    result = proxy_contract.functions.hashToCurveNoPrecompile(signing_root).call()
-    expected1 = proxy_contract.functions.hashToCurve(signing_root).call()
-    points = proxy_contract.functions.signature_to_g2_points(signing_root).call()
-    converted_expected = tuple(_convert_fp2_to_int(fp2_repr) for fp2_repr in expected1)
-    converted_result = tuple(_convert_fp2_to_int(fp2_repr) for fp2_repr in result)
-    spec_result = normalize(hash_to_G2(signing_root, dst, hashlib.sha256))
-    # converted_result = tuple(_convert_fp2_to_int(fp2_repr) for fp2_repr in result)
-    # expected1 = tuple(_convert_fp2_to_int(fp2_repr) for fp2_repr in expected1)
-    first_g2 = points[0]
-    second_g2 = points[1]
-    print(f"expected: {converted_expected}")
-    print(f"actual: {spec_result}")
-    # print(f"first_point: {first_point}")
-    first_g2_a = first_g2[0]
-    first_g2_a_a = first_g2_a[0]
-    first_g2_a_b = first_g2_a[1]
-    # first_g2_b = first_g2[1]
-    # first_g2_b_a = first_g2_b[0]
-    # first_g2_b_b = first_g2_b[1]
-    # second_g2_a = second_g2[0]
-    # second_g2_a_a = second_g2_a[0]
-    # second_g2_a_b = second_g2_a[1]
-    second_g2_b = second_g2[1]
-    second_g2_b_a = second_g2_b[0]
-    second_g2_b_b = second_g2_b[1]
-    print(f"first_point_g2_a_a: {first_g2_a_a}")
-    print(f"first_point_g2_a_b: {first_g2_a_b}")
-    # print(f"first_point_g2_b_a: {first_g2_b_a}")
-    # print(f"first_point_g2_b_b: {first_g2_b_b}")
-
-    print(f"second_point_g2_a_a: {second_g2_b_a}")
-    print(f"second_point_g2_a_b: {second_g2_b_b}")
-    # print(f"second_point_g2_b_a: {second_g2_b_a}")
-    # print(f"second_point_g2_b_b: {second_g2_b_b}")
-    actual = proxy_contract.functions.ladd(first_g2_a, second_g2_b).call()
-    expected = first_g2_a + second_g2_b
-
-    print(f"actual: {actual}")
-    print(f"expected: {expected}")
-    # print(f"second_point: {second_point}")
-    assert actual == expected
+    print(f"expected: {type(expected)}")
+    assert converted_actual == expected
 
 def test_lmod_field_multiple_medium_1(proxy_contract):
     FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab

@@ -41,6 +41,11 @@ contract DepositVerifier  {
         Fp2 X;
         Fp2 Y;
     }
+    struct G2PointTmp {
+        Fp2 X;
+        Fp2 Y;
+        Fp2 Z;
+    }
     uint256 constant BLS_BASE_FIELD_B = 0x64774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab;
     uint256 constant BLS_BASE_FIELD_A = 0x1a0111ea397fe69a4b1ba7b6434bacd7;
     /* Fp constant BASE_FIELD = Fp(BLS_BASE_FIELD_A, BLS_BASE_FIELD_B); */
@@ -324,6 +329,17 @@ contract DepositVerifier  {
         }
         return Fp(r1, r0);
     }}
+    function lmul(Fp2 memory x, Fp2 memory y) public pure returns (Fp2 memory) {
+        Fp memory r1 = lmul(x.a, y.a); 
+        Fp memory r0 = lmul(x.b, y.b); 
+        return Fp2(r1, r0);
+    }
+    function lmul(Fp2 memory x, uint scalar) public pure returns (Fp2 memory) {
+        Fp memory scalar_point = Fp(0, scalar);
+        Fp memory r1 = lmul(x.a, scalar_point); 
+        Fp memory r0 = lmul(x.b, scalar_point); 
+        return Fp2(r1, r0);
+    }
 
     function lmul(Fp memory x, Fp memory y) public pure returns (Fp memory) {
         uint r0;
@@ -351,7 +367,38 @@ contract DepositVerifier  {
         return Fp(r1, r0);
     }
 
+
+    /* function lpow(Fp memory x, uint32 exponent) public pure returns (Fp memory) { */
+    /*     uint r0; */
+    /*     uint r1; */
+    /**/
+    /*     uint base_length = bitLength(x); */
+    /*     uint32 exponent_length = 32; */
+    /*     uint modulus_length = 48; */
+    /*     bytes memory number = abi.encodePacked([x.a, x.b]); */
+    /*     bytes memory modulus = abi.encodePacked([BLS_BASE_FIELD_A, BLS_BASE_FIELD_B]); */
+    /**/
+    /*     bytes memory = abi.encodePacked([ */
+    /*         base_length, */
+    /*         exponent_length, */
+    /*         modulus_length, */
+    /*         number, */
+    /*         exponent, */
+    /*         modulus */
+    /*     ]); */
+    /**/
+    /**/
+    /*     return Fp(r1, r0); */
+    /* } */
     /* function lsquare(Fp memory x) public view returns (Fp memory result) { */
+    function lsquare(Fp2 memory x) public view returns (Fp2 memory) {
+        Fp memory p1 = x.a;
+        Fp memory p2 = x.b;
+        p1 = lpow(p1, 2);
+        p2 = lpow(p2, 2);
+        return Fp2(p1, p2);
+        /* return lpow(x, 2); */
+    }
     function lsquare(Fp memory x) public view returns (Fp memory) {
         return lpow(x, 2);
     }
@@ -359,15 +406,16 @@ contract DepositVerifier  {
         uint r1 = x.a;
         uint length = 32;
         uint r0 = x.b;
-
+        Fp memory result;
+        bytes memory data;
         if (r1 > 0) {
             length = 64;
-            bytes memory data = abi.encodePacked([r1, r0]);
-            Fp memory result = expmod(data, exp, length);
+            data = abi.encodePacked([r1, r0]);
+            result = expmod(data, exp, length);
             return result;
         }
-        bytes memory data = abi.encodePacked([r0]);
-        Fp memory result = expmod(data, exp, length);
+        data = abi.encodePacked([r0]);
+        result = expmod(data, exp, length);
         return result;
     }
 
@@ -606,18 +654,35 @@ contract DepositVerifier  {
     }}
 
     // This function is being used for testing purposes. 
-    function addG2NoPrecompile(G2Point memory a, G2Point memory b) public pure returns (G2Point memory) {
-        if(G2_isZeroNoPrecompile(a.X, a.Y)) { return b; }
-        if (G2_isZeroNoPrecompile(b.X, b.Y)) { return a; }
-
-        /* Fp memory H = lsub(b.X, a.X); */
-        Fp2 memory X = ladd(a.X, b.X);
-        Fp2 memory Y = ladd(a.Y, b.Y);
-
-        return G2Point(X, Y);
+    function addG2NoPrecompile(G2Point memory a, G2Point memory b) public view returns (G2PointTmp memory) {
+        if(G2_isZeroNoPrecompile(a.X, a.Y)) { 
+            G2PointTmp memory res = G2PointTmp(b.X, b.Y, Fp2(Fp(0,0), Fp(0,0)));
+            return res;
+        }
+        if (G2_isZeroNoPrecompile(b.X, b.Y)) { 
+            G2PointTmp memory res = G2PointTmp(a.X, a.Y, Fp2(Fp(0,0), Fp(0,0)));
+            return res;
+        }
+        Fp2 memory X;
+        Fp2 memory Y;
+        Fp2 memory Z;
+        Fp2 memory H = lsub(b.X, a.X);
+        Fp2 memory HH = lsquare(H);
+        Fp2 memory I = lmul(HH, 4);
+        /* Fp2 memory J = lmul(H, I); */
+        /* Fp2 memory r = lmul(lsub(b.Y, a.Y), 2); */
+        /* Fp2 memory V = lmul(a.X, I); */
+        /* X = lsub(lsub(lsquare(r), J), lmul(V, 2)); */
+        /* Y = lsub(lmul(r, lsub(V, X)), lmul(lmul(a.Y, H), J)); */
+        /* Z = lmul(H, 2); */
+        
+        X = H; 
+        Y = HH; 
+        Z = I; 
+        return G2PointTmp(X, Y, Z);
     }
 
-    function addG2(G2Point memory a, G2Point memory b) private view returns (G2Point memory) {
+    function addG2(G2Point memory a, G2Point memory b) public view returns (G2Point memory) {
         uint[16] memory input;
         input[0]  = a.X.a.a;
         input[1]  = a.X.a.b;
@@ -674,12 +739,12 @@ contract DepositVerifier  {
 
     // Implements "hash to the curve" from the IETF BLS draft.
     // NOTE: function is exposed for testing...
-    function hashToCurveNoPrecompile(bytes32 message) public view returns (G2Point memory) {
-        Fp2[2] memory messageElementsInField = hashToField(message);
-        G2Point memory firstPoint = mapToCurve(messageElementsInField[0]);
-        G2Point memory secondPoint = mapToCurve(messageElementsInField[1]);
-        return addG2NoPrecompile(firstPoint, secondPoint);
-    }
+    /* function hashToCurveNoPrecompile(bytes32 message) public view returns (G2Point memory) { */
+    /*     Fp2[2] memory messageElementsInField = hashToField(message); */
+    /*     G2Point memory firstPoint = mapToCurve(messageElementsInField[0]); */
+    /*     G2Point memory secondPoint = mapToCurve(messageElementsInField[1]); */
+    /*     return addG2NoPrecompile(firstPoint, secondPoint); */
+    /* } */
     // Implements "hash to the curve" from the IETF BLS draft.
     // NOTE: function is exposed for testing...
     function hashToCurve(bytes32 message) public view returns (G2Point memory) {
