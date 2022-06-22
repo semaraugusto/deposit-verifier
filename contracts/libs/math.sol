@@ -2,9 +2,10 @@
 pragma solidity 0.8.14;
 pragma experimental ABIEncoderV2;
 
-library Math  {
+contract Math  {
+    constructor() {}
     uint8 constant MOD_EXP_PRECOMPILE_ADDRESS = 0x5;
-    function lmul(uint256 x, uint256 y) internal pure returns (uint, uint) { unchecked {
+    function lmul(uint256 x, uint256 y) public pure returns (uint, uint) { unchecked {
         uint r0;
         uint r1;
         if(x == 0 || y == 0) {
@@ -23,7 +24,7 @@ library Math  {
         return (r1, r0);
     }}
 
-    function bitLength(uint256 n) internal pure returns (uint256) { unchecked {
+    function bitLength(uint256 n) public pure returns (uint256) { unchecked {
         uint256 m;
 
         for (uint256 s = 128; s > 0; s >>= 1) {
@@ -36,7 +37,7 @@ library Math  {
         return m + 1;
     }}
 
-    function lsub(uint256 x, uint256 y, uint256 carry) internal pure returns (uint256, uint256) { unchecked {
+    function lsub(uint256 x, uint256 y, uint256 carry) public pure returns (uint256, uint256) { unchecked {
         if (x > 0)
             return lsub(x - carry, y);
         if (y < type(uint256).max)
@@ -44,16 +45,16 @@ library Math  {
         return (1 - carry, 1);
     }}
 
-    function lsub(uint256 x, uint256 y) internal pure returns (uint256, uint256) { unchecked {
+    function lsub(uint256 x, uint256 y) public pure returns (uint256, uint256) { unchecked {
         uint256 z = x - y;
         return (z, cast(z > x));
     }}
-    function add(uint256 x, uint256 y) internal pure returns (uint256, uint256) { unchecked {
+    function add(uint256 x, uint256 y) public pure returns (uint256, uint256) { unchecked {
         uint256 z = x + y;
         return (z, cast(z < x));
     }}
 
-    function add(uint256 x, uint256 y, uint256 carry) internal pure returns (uint256, uint256) { unchecked {
+    function add(uint256 x, uint256 y, uint256 carry) public pure returns (uint256, uint256) { unchecked {
         if (x < type(uint256).max)
             return add(x + carry, y);
         if (y < type(uint256).max)
@@ -62,7 +63,7 @@ library Math  {
     }}
 
 
-    function expmod(bytes memory data, uint exponent, uint length) internal view returns (uint, uint) {
+    function expmod(bytes memory data, uint exponent, uint length) public view returns (uint, uint) {
         assert (length >= 0);
         assert (length <= data.length);
 
@@ -112,13 +113,13 @@ library Math  {
             switch success case 0 { invalid() }
         }
         require(success, "call to modular exponentiation precompile failed");
-        uint r1 = sliceToUint(result, 0, 16);
-        uint r0 = sliceToUint(result, 16, 48);
+        uint r1 = sliceToUintL(result, 0, 16);
+        uint r0 = sliceToUintL(result, 16, 48);
         /* uint r0; */
         return (r1, r0);
     }
 
-    function sliceToUint(bytes memory data, uint start, uint end) internal pure returns (uint) {
+    function sliceToUintL(bytes memory data, uint start, uint end) public pure returns (uint) {
         uint length = end - start;
         assert(length >= 0);
         assert(length <= 32);
@@ -130,7 +131,19 @@ library Math  {
         }
         return result;
     }
-    function cast(bool b) internal pure returns (uint256 u) { unchecked {
+    function sliceToUint(bytes memory data, uint start, uint end) public pure returns (uint) {
+        uint length = end - start;
+        assert(length >= 0);
+        assert(length <= 32);
+
+        uint result;
+        for (uint i = 0; i < length; i++) {
+            bytes1 b = data[start+i];
+            result = result + (uint8(b) * 2**(8*(length-i-1)));
+        }
+        return result;
+    }
+    function cast(bool b) public pure returns (uint256 u) { unchecked {
         assembly { u := b }
     }}
 }
