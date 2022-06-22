@@ -3,6 +3,7 @@ pragma solidity 0.8.14;
 pragma experimental ABIEncoderV2;
 
 import {Math} from "./libs/math.sol";
+import {FpLib} from "./libs/FpLib.sol";
 
 contract DepositVerifier  {
     uint constant PUBLIC_KEY_LENGTH = 48;
@@ -18,24 +19,19 @@ contract DepositVerifier  {
     bytes1 constant BLS_BYTE_WITHOUT_FLAGS_MASK = bytes1(0x1f);
     uint8 constant MOD_EXP_PRECOMPILE_ADDRESS = 0x5;
 
-    event Add(uint r0, uint r1);
     // Fp is a field element with the high-order part stored in `a`.
-    struct Fp {
-        uint a;
-        uint b;
-    }
 
     // Fp2 is an extension field element with the coefficient of the
     // quadratic non-residue stored in `b`, i.e. p = a + i * b
     struct Fp2 {
-        Fp a;
-        Fp b;
+        FpLib.Fp a;
+        FpLib.Fp b;
     }
 
     // G1Point represents a point on BLS12-381 over Fp with coordinates (X,Y);
     struct G1Point {
-        Fp X;
-        Fp Y;
+        FpLib.Fp X;
+        FpLib.Fp Y;
     }
 
     // G2Point represents a point on BLS12-381 over Fp2 with coordinates (X,Y);
@@ -146,28 +142,16 @@ contract DepositVerifier  {
         return output;
     }
 
-    function convertSliceToFpUnchecked(bytes memory data) private pure returns (Fp memory result) {
-        uint a = Math.sliceToUint(data, 0, 16);
-        uint b = Math.sliceToUint(data, 16, 48);
-        return Fp(a, b);
-    }
-    function convertSliceToFp(bytes memory data, uint start, uint end) private view returns (Fp memory result) {
-        bytes memory fieldElement = Math.reduceModulo(data, start, end);
-        uint a = Math.sliceToUint(fieldElement, 0, 16);
-        uint b = Math.sliceToUint(fieldElement, 16, 48);
-        return Fp(a, b);
-    }
-
     // NOTE: function is exposed for testing...
     function hashToField(bytes32 message) public view returns (Fp2[2] memory result) {
         bytes memory some_bytes = expandMessage(message);
         result[0] = Fp2(
-            convertSliceToFp(some_bytes, 0, 64),
-            convertSliceToFp(some_bytes, 64, 128)
+            FpLib.convertSliceToFp(some_bytes, 0, 64),
+            FpLib.convertSliceToFp(some_bytes, 64, 128)
         );
         result[1] = Fp2(
-            convertSliceToFp(some_bytes, 128, 192),
-            convertSliceToFp(some_bytes, 192, 256)
+            FpLib.convertSliceToFp(some_bytes, 128, 192),
+            FpLib.convertSliceToFp(some_bytes, 192, 256)
         );
     }
 
@@ -197,12 +181,12 @@ contract DepositVerifier  {
 
         return G2Point(
             Fp2(
-                Fp(output[0], output[1]),
-                Fp(output[2], output[3])
+                FpLib.Fp(output[0], output[1]),
+                FpLib.Fp(output[2], output[3])
             ),
             Fp2(
-                Fp(output[4], output[5]),
-                Fp(output[6], output[7])
+                FpLib.Fp(output[4], output[5]),
+                FpLib.Fp(output[6], output[7])
             )
         );
     }
@@ -233,8 +217,8 @@ contract DepositVerifier  {
 
         return G2Point(
             Fp2(
-                Fp(output[0], output[1]),
-                Fp(output[2], output[3])), Fp2( Fp(output[4], output[5]), Fp(output[6], output[7]))
+                FpLib.Fp(output[0], output[1]),
+                FpLib.Fp(output[2], output[3])), Fp2( FpLib.Fp(output[4], output[5]), FpLib.Fp(output[6], output[7]))
         );
     }
 
@@ -243,132 +227,38 @@ contract DepositVerifier  {
     }
 
     function lmul(Fp2 memory x, Fp2 memory y) public view returns (Fp2 memory) {
-        Fp memory r1 = lmul(x.a, y.a); 
-        Fp memory r0 = lmul(x.b, y.b); 
+        FpLib.Fp memory r1 = FpLib.lmul(x.a, y.a); 
+        FpLib.Fp memory r0 = FpLib.lmul(x.b, y.b); 
         return Fp2(r1, r0);
     }
     function lmul(Fp2 memory x, uint scalar) public view returns (Fp2 memory) {
-        Fp memory scalar_point = Fp(0, scalar);
-        Fp memory r1 = lmul(x.a, scalar_point); 
-        Fp memory r0 = lmul(x.b, scalar_point); 
+        FpLib.Fp memory scalar_point = FpLib.Fp(0, scalar);
+        FpLib.Fp memory r1 = FpLib.lmul(x.a, scalar_point); 
+        FpLib.Fp memory r0 = FpLib.lmul(x.b, scalar_point); 
         return Fp2(r1, r0);
     }
 
-    function lmul(Fp memory x, Fp memory y) public view returns (Fp memory) {
-        uint r0;
-        uint r1;
-        uint r2;
-        uint carry;
-        uint pa; 
-        uint pb; 
-
-        (pa, pb) = Math.lmul(x.b, y.b);
-
-        r0 = pb;
-        r1 = pa;
-
-        (pa, pb) = Math.lmul(x.a, y.b);
-        (r1, carry) = Math.add(r1, pb, carry);
-        (r2, carry) = Math.add(0, pa, carry);
-        require(carry == 0, "overflow");
-
-        (pa, pb) = Math.lmul(x.b, y.a);
-        (r1, carry) = Math.add(r1, pb, carry);
-        (r2, carry) = Math.add(r2, pa, carry);
-        require(carry == 0, "overflow");
-
-        (pa, pb) = Math.lmul(x.a, y.a);
-        (r2, carry) = Math.add(r2, pb, carry);
-        require(carry == 0, "overflow");
-        require(pa == 0, "overflow");
-
-        Fp memory result = Fp(r1, r0);
-        Fp memory base_field = get_base_field();
-        if(r2 == 0 && lgte(result, base_field)) {
-            return result;
-        }
-        /* Fp memory partial_res = ldiv(x, p); */
-        /* partial_res = lmul(partial_res, p); */
-        /* return lsub(x, partial_res); */
-
-        uint length = 32;
-        /* bytes memory data = ; */
-        bytes memory data = abi.encodePacked([r0]);
-        if(r2 > 0) {
-            length = 96;
-            data = abi.encodePacked([r2, r1, r0]);
-            /* return expmod(data, 1, length); */
-            /* return res */
-        } else {
-            length = 64;
-            data = abi.encodePacked([r1, r0]);
-        }
-        (r1, r0) = Math.expmod(data, 1, length);
-        return lmod(Fp(r1, r0), base_field);
-    }
-
     function lsquare(Fp2 memory x) public view returns (Fp2 memory) {
-        Fp memory p1 = lpow(x.a, 2);
-        Fp memory p2 = lpow(x.b, 2);
+        FpLib.Fp memory p1 = FpLib.lsquare(x.a);
+        FpLib.Fp memory p2 = FpLib.lsquare(x.b);
         return Fp2(p1, p2);
     }
-    function lsquare(Fp memory x) public view returns (Fp memory) {
-        return lpow(x, 2);
-    }
-    function lpow(Fp memory x, uint exp) public view returns (Fp memory) {
-        uint r1 = x.a;
-        uint length = 32;
-        uint r0 = x.b;
-        bytes memory data;
-        data = abi.encodePacked([r0]);
-        if (r1 > 0) {
-            length = 64;
-            data = abi.encodePacked([r1, r0]);
-        }
-        (r1, r0) = Math.expmod(data, exp, length);
-        return Fp(r1, r0);
+
+    function get_base_field() public pure returns (FpLib.Fp memory) {
+        return FpLib.Fp(BLS_BASE_FIELD_A, BLS_BASE_FIELD_B);
     }
 
-    function get_base_field() public pure returns (Fp memory) {
-        return Fp(BLS_BASE_FIELD_A, BLS_BASE_FIELD_B);
-    }
-
-    function lmod(Fp memory x, Fp memory p) public view returns (Fp memory) {
-        if (lgte(x, p)) {
-            Fp memory partial_res = ldiv(x, p);
-            partial_res = lmul(partial_res, p);
-            return lsub(x, partial_res);
+    function lmod(FpLib.Fp memory x, FpLib.Fp memory p) public view returns (FpLib.Fp memory) {
+        if (FpLib.lgte(x, p)) {
+            FpLib.Fp memory partial_res = ldiv(x, p);
+            partial_res = FpLib.lmul(partial_res, p);
+            return FpLib.lsub(x, partial_res);
         } else {
             return x;
         }
     }
 
-    function leq(Fp memory x, Fp memory y) public pure returns (bool) {
-        return(x.a == y.a && x.b == y.b);
-    }
-
-    function lgte(Fp memory x, Fp memory y) public pure returns (bool) {
-        uint r0;
-        uint r1;
-        uint carry = 0;
-        (r1, carry) = Math.lsub(x.a, y.a, carry);
-        // if overflowed then its lt
-        if(carry != 0) {
-            return false;
-        }
-        else if(r1 > 0) {
-            return true;
-        }
-        else if(r1 == 0) {
-            carry = 0;
-            (r0, carry) = Math.lsub(x.b, y.b, carry);
-            if(carry != 0) {
-                return false;
-            }
-        }
-        return true;
-    }
-    function bitLength(Fp memory p) public pure returns (uint256) { unchecked {
+    function bitLength(FpLib.Fp memory p) public pure returns (uint256) { unchecked {
         if (p.a > 0) {
             uint a_length = Math.bitLength(p.a);
             return a_length + 256;
@@ -377,7 +267,7 @@ contract DepositVerifier  {
         /* bitLength(p.b); */
     }}
 
-    function shl(Fp memory x, uint256 n) public pure returns (Fp memory) { unchecked {
+    function shl(FpLib.Fp memory x, uint256 n) public pure returns (FpLib.Fp memory) { unchecked {
         if (x.a == 0 && x.b == 0)
             return x;
         
@@ -394,26 +284,26 @@ contract DepositVerifier  {
         remainder = u >> comp_shift;
         require(remainder == 0, "overflow");
 
-        return Fp(r1, r0);
+        return FpLib.Fp(r1, r0);
     }}
 
-    function ldiv(Fp memory x, Fp memory y) public view returns (Fp memory) { unchecked {
+    function ldiv(FpLib.Fp memory x, FpLib.Fp memory y) public view returns (FpLib.Fp memory) { unchecked {
         require((y.a != 0 || y.b != 0), "division by zero");
         if((x.a == y.a) && (x.b == y.b)) {
-            return Fp(0, 1);
+            return FpLib.Fp(0, 1);
         }
         uint x_bit_length = bitLength(x);
         uint y_bit_length = bitLength(y);
-        Fp memory one = Fp(0, 1);
-        Fp memory p;
+        FpLib.Fp memory one = FpLib.Fp(0, 1);
+        FpLib.Fp memory p;
         while(x_bit_length > y_bit_length) {
             uint shift = x_bit_length - y_bit_length - 1;
-            p = ladd(p, shl(one, shift));
-            x = lsub(x, shl(y, shift));
+            p = FpLib.ladd(p, shl(one, shift));
+            x = FpLib.lsub(x, shl(y, shift));
             x_bit_length = bitLength(x);
         }
-        if (lgte(x, y)) {
-            return ladd(p, one);
+        if (FpLib.lgte(x, y)) {
+            return FpLib.ladd(p, one);
         }
 
         return p;
@@ -421,67 +311,29 @@ contract DepositVerifier  {
 
     function lsub(Fp2 memory x, Fp2 memory y) public pure returns (Fp2 memory) { unchecked {
 
-        Fp memory a = lsubUnchecked(x.a, y.a);
-        Fp memory b = lsubUnchecked(x.b, y.b);
+        FpLib.Fp memory a = FpLib.lsubUnchecked(x.a, y.a);
+        FpLib.Fp memory b = FpLib.lsubUnchecked(x.b, y.b);
         return Fp2(a, b);
-    }}
-
-
-    function lsubUnchecked(Fp memory x, Fp memory y) public pure returns (Fp memory) { unchecked {
-        uint r0;
-        uint r1;
-        uint carry = 0;
-        (r0, carry) = Math.lsub(x.b, y.b, carry);
-        (r1, carry) = Math.lsub(x.a, y.a, carry);
-        if(carry > 0) {
-            Fp memory base_field = get_base_field();
-            return lsub(base_field, Fp(0, carry));
-        }
-        return Fp(r1, r0);
-    }}
-
-    function lsub(Fp memory x, Fp memory y) public pure returns (Fp memory) { unchecked {
-        uint r0;
-        uint r1;
-        uint carry = 0;
-        (r0, carry) = Math.lsub(x.b, y.b, carry);
-        (r1, carry) = Math.lsub(x.a, y.a, carry);
-        require(carry == 0, "underflow");
-        return Fp(r1, r0);
-    }}
-
-    function ladd(Fp memory x, Fp memory y) public view returns (Fp memory) { unchecked {
-        uint r0;
-        uint r1;
-        uint carry;
-        (r0, carry) = Math.add(x.b, y.b, carry);
-        (r1, carry) = Math.add(x.a, y.a, carry);
-        require(carry == 0, "overflow");
-
-        Fp memory result = Fp(r1, r0);
-        Fp memory base_field = get_base_field();
-        return lmod(result, base_field);
-        /* return result; */
     }}
 
     function ladd(Fp2 memory x, Fp2 memory y) public view returns (Fp2 memory) { unchecked {
-        Fp memory a = ladd(x.a, y.a);
-        Fp memory b = ladd(x.b, y.b);
+        FpLib.Fp memory a = FpLib.ladd(x.a, y.a);
+        FpLib.Fp memory b = FpLib.ladd(x.b, y.b);
         return Fp2(a, b);
     }}
 
-    function ldouble(Fp memory x) public view returns (Fp memory) {unchecked {
-        return ladd(x, x);
+    function ldouble(FpLib.Fp memory x) public view returns (FpLib.Fp memory) {unchecked {
+        return FpLib.ladd(x, x);
     }}
 
     // This function is being used for testing purposes. 
     function addG2NoPrecompile(G2Point memory a, G2Point memory b) public view returns (G2PointTmp memory) {
         if(G2_isZeroNoPrecompile(a.X, a.Y)) { 
-            G2PointTmp memory res = G2PointTmp(b.X, b.Y, Fp2(Fp(0,0), Fp(0,0)));
+            G2PointTmp memory res = G2PointTmp(b.X, b.Y, Fp2(FpLib.Fp(0,0), FpLib.Fp(0,0)));
             return res;
         }
         if (G2_isZeroNoPrecompile(b.X, b.Y)) { 
-            G2PointTmp memory res = G2PointTmp(a.X, a.Y, Fp2(Fp(0,0), Fp(0,0)));
+            G2PointTmp memory res = G2PointTmp(a.X, a.Y, Fp2(FpLib.Fp(0,0), FpLib.Fp(0,0)));
             return res;
         }
         Fp2 memory X;
@@ -498,9 +350,6 @@ contract DepositVerifier  {
         Y = lsub(lmul(r, lsub(V, X)), lmul(lmul(a.Y, H), J));
         Z = lmul(H, 2);
         
-        /* X = H;  */
-        /* Y = HH;  */
-        /* Z = I;  */
         return G2PointTmp(X, Y, Z);
     }
 
@@ -543,12 +392,12 @@ contract DepositVerifier  {
 
         return G2Point(
             Fp2(
-                Fp(output[0], output[1]),
-                Fp(output[2], output[3])
+                FpLib.Fp(output[0], output[1]),
+                FpLib.Fp(output[2], output[3])
             ),
             Fp2(
-                Fp(output[4], output[5]),
-                Fp(output[6], output[7])
+                FpLib.Fp(output[4], output[5]),
+                FpLib.Fp(output[6], output[7])
             )
         );
     }
@@ -577,63 +426,63 @@ contract DepositVerifier  {
     }
 
     // NOTE: function is exposed for testing...
-    /* function blsPairingCheck(G1Point memory publicKey, G2Point memory messageOnCurve, G2Point memory signature) public view returns (bool) { */
-    /*     uint[24] memory input; */
-    /**/
-    /*     input[0] =  publicKey.X.a; */
-    /*     input[1] =  publicKey.X.b; */
-    /*     input[2] =  publicKey.Y.a; */
-    /*     input[3] =  publicKey.Y.b; */
-    /**/
-    /*     input[4] =  messageOnCurve.X.a.a; */
-    /*     input[5] =  messageOnCurve.X.a.b; */
-    /*     input[6] =  messageOnCurve.X.b.a; */
-    /*     input[7] =  messageOnCurve.X.b.b; */
-    /*     input[8] =  messageOnCurve.Y.a.a; */
-    /*     input[9] =  messageOnCurve.Y.a.b; */
-    /*     input[10] = messageOnCurve.Y.b.a; */
-    /*     input[11] = messageOnCurve.Y.b.b; */
-    /**/
-    /*     // NOTE: this constant is -P1, where P1 is the generator of the group G1. */
-    /*     input[12] = 31827880280837800241567138048534752271; */
-    /*     input[13] = 88385725958748408079899006800036250932223001591707578097800747617502997169851; */
-    /*     input[14] = 22997279242622214937712647648895181298; */
-    /*     input[15] = 46816884707101390882112958134453447585552332943769894357249934112654335001290; */
-    /**/
-    /*     input[16] =  signature.X.a.a; */
-    /*     input[17] =  signature.X.a.b; */
-    /*     input[18] =  signature.X.b.a; */
-    /*     input[19] =  signature.X.b.b; */
-    /*     input[20] =  signature.Y.a.a; */
-    /*     input[21] =  signature.Y.a.b; */
-    /*     input[22] =  signature.Y.b.a; */
-    /*     input[23] =  signature.Y.b.b; */
-    /**/
-    /*     uint[1] memory output; */
-    /**/
-    /*     bool success; */
-    /*     assembly { */
-    /*         success := staticcall( */
-    /*             sub(gas(), 2000), */
-    /*             BLS12_381_PAIRING_PRECOMPILE_ADDRESS, */
-    /*             input, */
-    /*             768, */
-    /*             output, */
-    /*             32 */
-    /*         ) */
-    /*         // Use "invalid" to make gas estimation work */
-    /*         switch success case 0 { invalid() } */
-    /*     } */
-    /*     require(success, "call to pairing precompile failed"); */
-    /**/
-    /*     return output[0] == 1; */
-    /* } */
+    function blsPairingCheck(G1Point memory publicKey, G2Point memory messageOnCurve, G2Point memory signature) public view returns (bool) {
+        uint[24] memory input;
 
-    function decodeG1Point(bytes memory encodedX, Fp memory Y) private pure returns (G1Point memory) {
+        input[0] =  publicKey.X.a;
+        input[1] =  publicKey.X.b;
+        input[2] =  publicKey.Y.a;
+        input[3] =  publicKey.Y.b;
+
+        input[4] =  messageOnCurve.X.a.a;
+        input[5] =  messageOnCurve.X.a.b;
+        input[6] =  messageOnCurve.X.b.a;
+        input[7] =  messageOnCurve.X.b.b;
+        input[8] =  messageOnCurve.Y.a.a;
+        input[9] =  messageOnCurve.Y.a.b;
+        input[10] = messageOnCurve.Y.b.a;
+        input[11] = messageOnCurve.Y.b.b;
+
+        // NOTE: this constant is -P1, where P1 is the generator of the group G1.
+        input[12] = 31827880280837800241567138048534752271;
+        input[13] = 88385725958748408079899006800036250932223001591707578097800747617502997169851;
+        input[14] = 22997279242622214937712647648895181298;
+        input[15] = 46816884707101390882112958134453447585552332943769894357249934112654335001290;
+
+        input[16] =  signature.X.a.a;
+        input[17] =  signature.X.a.b;
+        input[18] =  signature.X.b.a;
+        input[19] =  signature.X.b.b;
+        input[20] =  signature.Y.a.a;
+        input[21] =  signature.Y.a.b;
+        input[22] =  signature.Y.b.a;
+        input[23] =  signature.Y.b.b;
+
+        uint[1] memory output;
+
+        bool success;
+        assembly {
+            success := staticcall(
+                sub(gas(), 2000),
+                BLS12_381_PAIRING_PRECOMPILE_ADDRESS,
+                input,
+                768,
+                output,
+                32
+            )
+            // Use "invalid" to make gas estimation work
+            switch success case 0 { invalid() }
+        }
+        require(success, "call to pairing precompile failed");
+
+        return output[0] == 1;
+    }
+
+    function decodeG1Point(bytes memory encodedX, FpLib.Fp memory Y) private pure returns (G1Point memory) {
         encodedX[0] = encodedX[0] & BLS_BYTE_WITHOUT_FLAGS_MASK;
         uint a = Math.sliceToUint(encodedX, 0, 16);
         uint b = Math.sliceToUint(encodedX, 16, 48);
-        Fp memory X = Fp(a, b);
+        FpLib.Fp memory X = FpLib.Fp(a, b);
         return G1Point(X,Y);
     }
 
@@ -647,18 +496,18 @@ contract DepositVerifier  {
         uint ba = Math.sliceToUint(encodedX, 0, 16);
         uint bb = Math.sliceToUint(encodedX, 16, 48);
         Fp2 memory X = Fp2(
-            Fp(aa, ab),
-            Fp(ba, bb)
+            FpLib.Fp(aa, ab),
+            FpLib.Fp(ba, bb)
         );
         return G2Point(X, Y);
     }
 
-    /* // NOTE: function is exposed for testing... */
+    // NOTE: function is exposed for testing...
     /* function blsSignatureIsValid( */
     /*     bytes32 message, */
     /*     bytes memory encodedPublicKey, */
     /*     bytes memory encodedSignature, */
-    /*     Fp memory publicKeyYCoordinate, */
+    /*     FpLib.Fp memory publicKeyYCoordinate, */
     /*     Fp2 memory signatureYCoordinate */
     /* ) public view returns (bool) { */
     /*     G1Point memory publicKey = decodeG1Point(encodedPublicKey, publicKeyYCoordinate); */

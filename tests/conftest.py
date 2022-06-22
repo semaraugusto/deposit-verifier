@@ -37,6 +37,10 @@ def get_proxy_contract_json():
     filename = os.path.join(DIR, "../deposit_verifier.json")
     return _get_json(filename)
 
+def get_fplib_test_json():
+    filename = os.path.join(DIR, "../fplib_test.json")
+    return _get_json(filename)
+
 
 @pytest.fixture
 def berlin_vm_configuration():
@@ -80,14 +84,20 @@ def proxy_contract_deployer():
 
     return _deployer
 
-# @pytest.fixture
-# def proxy_contract(w3, math_contract, deposit_domain, proxy_contract_deployer):
-#     return proxy_contract_deployer(w3, math_contract.address, deposit_domain)
+@pytest.fixture
+def fplib_test_deployer():
+    def _deployer(w3):
+        return _deploy_contract(get_fplib_test_json(), w3)
+
+    return _deployer
 
 @pytest.fixture
 def proxy_contract(w3, deposit_domain, proxy_contract_deployer):
     return proxy_contract_deployer(w3, deposit_domain)
 
+@pytest.fixture
+def fplib_contract(w3, fplib_test_deployer):
+    return fplib_test_deployer(w3)
 
 @pytest.fixture
 def assert_tx_failed(tester):
