@@ -92,18 +92,12 @@ library FpLib  {
         if(r2 == 0 && lgte(result, base_field)) {
             return result;
         }
-        /* Fp memory partial_res = ldiv(x, p); */
-        /* partial_res = lmul(partial_res, p); */
-        /* return lsub(x, partial_res); */
 
         uint length = 32;
-        /* bytes memory data = ; */
         bytes memory data = abi.encodePacked([r0]);
         if(r2 > 0) {
             length = 96;
             data = abi.encodePacked([r2, r1, r0]);
-            /* return expmod(data, 1, length); */
-            /* return res */
         } else {
             length = 64;
             data = abi.encodePacked([r1, r0]);
@@ -258,52 +252,7 @@ library FpLib  {
         return Math.bitLength(p.b);
         /* bitLength(p.b); */
     }}
-    /* function fp_mul(Fp memory x, Fp memory y) internal view returns (Fp memory) { */
-    /*     uint r0; */
-    /*     uint r1; */
-    /*     uint r2; */
-    /*     uint pb; */
-    /*     uint pa; */
-    /*     uint carry; */
-    /**/
-    /*     (pa, pb) = Math.lmul(x.b, y.b); */
-    /**/
-    /*     r0 = pb; */
-    /*     r1 = pa; */
-    /**/
-    /*     (pa, pb) = Math.lmul(x.a, y.b); */
-    /*     (r1, carry) = Math.add(r1, pb, carry); */
-    /*     (r2, carry) = Math.add(0, pa, carry); */
-    /*     require(carry == 0, "overflow"); */
-    /**/
-    /*     (pa, pb) = Math.lmul(x.b, y.a); */
-    /*     (r1, carry) = Math.add(r1, pb, carry); */
-    /*     (r2, carry) = Math.add(r2, pa, carry); */
-    /*     require(carry == 0, "overflow"); */
-    /**/
-    /*     (pa, pb) = Math.lmul(x.a, y.a); */
-    /*     (r2, carry) = Math.add(r2, pb, carry); */
-    /*     require(carry == 0, "overflow"); */
-    /*     require(pa == 0, "overflow"); */
-    /**/
-    /*     Fp memory result = Fp(r1, r0); */
-    /*     Fp memory base_field = get_base_field(); */
-    /*     if(r2 == 0 && lgte(result, base_field)) { */
-    /*         return result; */
-    /*     } */
-    /**/
-    /*     uint length = 32; */
-    /*     bytes memory data = abi.encodePacked([r0]); */
-    /*     if(r2 > 0) { */
-    /*         length = 96; */
-    /*         data = abi.encodePacked([r2, r1, r0]); */
-    /*     } else { */
-    /*         length = 64; */
-    /*         data = abi.encodePacked([r1, r0]); */
-    /*     } */
-    /*     result = expmod(data, 1, length); */
-    /*     return lmod(result, base_field); */
-    /* } */
+
     function lsubUnchecked(FpLib.Fp memory x, FpLib.Fp memory y) internal pure returns (FpLib.Fp memory) { unchecked {
         uint r0;
         uint r1;
@@ -344,7 +293,10 @@ library FpLib  {
         result = expmod(data, exp, length);
         return result;
     }
-    function leq(FpLib.Fp memory x, FpLib.Fp memory y) internal pure returns (bool) {
+    function leq(Fp memory x, Fp memory y) internal pure returns (bool) {
         return(x.a == y.a && x.b == y.b);
     }
+    function ldouble(Fp memory x) public view returns (Fp memory) {unchecked {
+        return ladd(x, x);
+    }}
 }

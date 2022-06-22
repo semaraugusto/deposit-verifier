@@ -1,0 +1,54 @@
+from eth_utils import to_tuple
+from py_ecc.fields import FQ, FQ2
+from py_ecc.optimized_bls12_381 import FQ2, normalize
+
+# def convert_int_to_fp_repr(field_element):
+#     element_as_bytes = int(field_element).to_bytes(48, byteorder="big")
+#     a_bytes = element_as_bytes[:16]
+#     b_bytes = element_as_bytes[16:]
+#     return (
+#         int.from_bytes(a_bytes, byteorder="big"),
+#         int.from_bytes(b_bytes, byteorder="big"),
+#     )
+
+def convert_int_to_fp_repr(field_element):
+    element_as_bytes = int(field_element).to_bytes(48, byteorder="big")
+    a_bytes = element_as_bytes[:16]
+    b_bytes = element_as_bytes[16:]
+    return (
+        int.from_bytes(a_bytes, byteorder="big"),
+        int.from_bytes(b_bytes, byteorder="big"),
+    )
+
+@to_tuple
+def convert_int_to_fp2_repr(field_element):
+    for coeff in field_element.coeffs:
+        yield convert_int_to_fp_repr(coeff)
+
+def convert_big_to_fp_repr(field_element):
+    element_as_bytes = int(field_element).to_bytes(64, byteorder="big")
+    a_bytes = element_as_bytes[:32]
+    b_bytes = element_as_bytes[32:]
+    return (
+        int.from_bytes(a_bytes, byteorder="big"),
+        int.from_bytes(b_bytes, byteorder="big"),
+    )
+
+def convert_big_to_int(fp_repr):
+    a, b = fp_repr
+    a_bytes = a.to_bytes(32, byteorder="big")
+    b_bytes = b.to_bytes(32, byteorder="big")
+    full_bytes = b"".join((a_bytes, b_bytes))
+    return int.from_bytes(full_bytes, byteorder="big")
+
+def convert_fp_to_int(fp_repr):
+    a, b = fp_repr
+    a_bytes = a.to_bytes(16, byteorder="big")
+    b_bytes = b.to_bytes(32, byteorder="big")
+    full_bytes = b"".join((a_bytes, b_bytes))
+    return int.from_bytes(full_bytes, byteorder="big")
+
+
+def convert_fp2_to_int(fp2_repr):
+    a, b = fp2_repr
+    return FQ2((convert_fp_to_int(a), convert_fp_to_int(b)))

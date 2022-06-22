@@ -248,69 +248,7 @@ contract DepositVerifier  {
         return FpLib.Fp(BLS_BASE_FIELD_A, BLS_BASE_FIELD_B);
     }
 
-    function lmod(FpLib.Fp memory x, FpLib.Fp memory p) public view returns (FpLib.Fp memory) {
-        if (FpLib.lgte(x, p)) {
-            FpLib.Fp memory partial_res = ldiv(x, p);
-            partial_res = FpLib.lmul(partial_res, p);
-            return FpLib.lsub(x, partial_res);
-        } else {
-            return x;
-        }
-    }
-
-    function bitLength(FpLib.Fp memory p) public pure returns (uint256) { unchecked {
-        if (p.a > 0) {
-            uint a_length = Math.bitLength(p.a);
-            return a_length + 256;
-        }
-        return Math.bitLength(p.b);
-        /* bitLength(p.b); */
-    }}
-
-    function shl(FpLib.Fp memory x, uint256 n) public pure returns (FpLib.Fp memory) { unchecked {
-        if (x.a == 0 && x.b == 0)
-            return x;
-        
-        uint256 bits_shift = n % 256;
-        uint256 comp_shift = 256 - bits_shift;
-
-        /* uint256 remainder = 0; */
-
-        uint256 u = x.b;
-        uint r0 = u << n;
-        uint remainder = u >> comp_shift;
-        u = x.a;
-        uint r1 = u << n | remainder;
-        remainder = u >> comp_shift;
-        require(remainder == 0, "overflow");
-
-        return FpLib.Fp(r1, r0);
-    }}
-
-    function ldiv(FpLib.Fp memory x, FpLib.Fp memory y) public view returns (FpLib.Fp memory) { unchecked {
-        require((y.a != 0 || y.b != 0), "division by zero");
-        if((x.a == y.a) && (x.b == y.b)) {
-            return FpLib.Fp(0, 1);
-        }
-        uint x_bit_length = bitLength(x);
-        uint y_bit_length = bitLength(y);
-        FpLib.Fp memory one = FpLib.Fp(0, 1);
-        FpLib.Fp memory p;
-        while(x_bit_length > y_bit_length) {
-            uint shift = x_bit_length - y_bit_length - 1;
-            p = FpLib.ladd(p, shl(one, shift));
-            x = FpLib.lsub(x, shl(y, shift));
-            x_bit_length = bitLength(x);
-        }
-        if (FpLib.lgte(x, y)) {
-            return FpLib.ladd(p, one);
-        }
-
-        return p;
-    }}
-
     function lsub(Fp2 memory x, Fp2 memory y) public pure returns (Fp2 memory) { unchecked {
-
         FpLib.Fp memory a = FpLib.lsubUnchecked(x.a, y.a);
         FpLib.Fp memory b = FpLib.lsubUnchecked(x.b, y.b);
         return Fp2(a, b);
@@ -320,10 +258,6 @@ contract DepositVerifier  {
         FpLib.Fp memory a = FpLib.ladd(x.a, y.a);
         FpLib.Fp memory b = FpLib.ladd(x.b, y.b);
         return Fp2(a, b);
-    }}
-
-    function ldouble(FpLib.Fp memory x) public view returns (FpLib.Fp memory) {unchecked {
-        return FpLib.ladd(x, x);
     }}
 
     // This function is being used for testing purposes. 
