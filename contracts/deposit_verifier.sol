@@ -2,6 +2,8 @@
 pragma solidity 0.8.14;
 pragma experimental ABIEncoderV2;
 
+import {Math} from "./libs/math.sol";
+
 contract DepositVerifier  {
     uint constant PUBLIC_KEY_LENGTH = 48;
     uint constant SIGNATURE_LENGTH = 96;
@@ -144,85 +146,15 @@ contract DepositVerifier  {
         return output;
     }
 
-    function sliceToUint(bytes memory data, uint start, uint end) private pure returns (uint) {
-        uint length = end - start;
-        assert(length >= 0);
-        assert(length <= 32);
-
-        uint result;
-        for (uint i = 0; i < length; i++) {
-            bytes1 b = data[start+i];
-            result = result + (uint8(b) * 2**(8*(length-i-1)));
-        }
-        return result;
-    }
-
-    // Reduce the number encoded as the big-endian slice of data[start:end] modulo the BLS12-381 field modulus.
-    // Copying of the base is cribbed from the following:
-    // https://github.com/ethereum/solidity-examples/blob/f44fe3b3b4cca94afe9c2a2d5b7840ff0fafb72e/src/unsafe/Memory.sol#L57-L74
-    function reduceModulo(bytes memory data, uint start, uint end) private view returns (bytes memory) {
-        uint length = end - start;
-        assert (length >= 0);
-        assert (length <= data.length);
-
-        bytes memory result = new bytes(48);
-
-        bool success;
-        assembly {
-            let p := mload(0x40)
-            // length of base
-            mstore(p, length)
-            // length of exponent
-            mstore(add(p, 0x20), 0x20)
-            // length of modulus
-            mstore(add(p, 0x40), 48)
-            // base
-            // first, copy slice by chunks of EVM words
-            let ctr := length
-            let src := add(add(data, 0x20), start)
-            let dst := add(p, 0x60)
-            for { }
-                or(gt(ctr, 0x20), eq(ctr, 0x20))
-                { ctr := sub(ctr, 0x20) }
-            {
-                mstore(dst, mload(src))
-                dst := add(dst, 0x20)
-                src := add(src, 0x20)
-            }
-            // next, copy remaining bytes in last partial word
-            let mask := sub(exp(256, sub(0x20, ctr)), 1)
-            let srcpart := and(mload(src), not(mask))
-            let destpart := and(mload(dst), mask)
-            mstore(dst, or(destpart, srcpart))
-            // exponent
-            mstore(add(p, add(0x60, length)), 1)
-            // modulus
-            let modulusAddr := add(p, add(0x60, add(0x10, length)))
-            mstore(modulusAddr, or(mload(modulusAddr), 0x1a0111ea397fe69a4b1ba7b6434bacd7)) // pt 1
-            mstore(add(p, add(0x90, length)), 0x64774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab) // pt 2
-            success := staticcall(
-                sub(gas(), 2000),
-                MOD_EXP_PRECOMPILE_ADDRESS,
-                p,
-                add(0xB0, length),
-                add(result, 0x20),
-                48)
-            // Use "invalid" to make gas estimation work
-            switch success case 0 { invalid() }
-        }
-        require(success, "call to modular exponentiation precompile failed");
-        return result;
-    }
-
     function convertSliceToFpUnchecked(bytes memory data) private pure returns (Fp memory result) {
-        uint a = sliceToUint(data, 0, 16);
-        uint b = sliceToUint(data, 16, 48);
+        uint a = Math.sliceToUint(data, 0, 16);
+        uint b = Math.sliceToUint(data, 16, 48);
         return Fp(a, b);
     }
     function convertSliceToFp(bytes memory data, uint start, uint end) private view returns (Fp memory result) {
-        bytes memory fieldElement = reduceModulo(data, start, end);
-        uint a = sliceToUint(fieldElement, 0, 16);
-        uint b = sliceToUint(fieldElement, 16, 48);
+        bytes memory fieldElement = Math.reduceModulo(data, start, end);
+        uint a = Math.sliceToUint(fieldElement, 0, 16);
+        uint b = Math.sliceToUint(fieldElement, 16, 48);
         return Fp(a, b);
     }
 
@@ -275,7 +207,6 @@ contract DepositVerifier  {
         );
     }
 
-
     function mapToCurve(Fp2 memory fieldElement) public view returns (G2Point memory result) {
         uint[4] memory input;
         input[0] = fieldElement.a.a;
@@ -311,25 +242,6 @@ contract DepositVerifier  {
         return((x.a.a | x.a.b | x.b.a | x.b.b | y.a.a | y.a.b | y.b.a | y.b.b) == 0);
     }
 
-    function lmul(uint256 x, uint256 y) public pure returns (Fp memory result) { unchecked {
-        uint r0;
-        uint r1;
-        if(x == 0 || y == 0) {
-            return Fp(0, 0);
-        }
-        if(x == 1) {
-            return Fp(0, y);
-        } else if(y == 1) {
-            return Fp(0, x);
-        }
-        assembly {
-            let rem := mulmod(x, y, not(0))
-            r0 := mul(x, y)
-            r1 := sub(sub(rem, r0), lt(rem, r0))
-        }
-        return Fp(r1, r0);
-    }}
-
     function lmul(Fp2 memory x, Fp2 memory y) public view returns (Fp2 memory) {
         Fp memory r1 = lmul(x.a, y.a); 
         Fp memory r0 = lmul(x.b, y.b); 
@@ -341,39 +253,34 @@ contract DepositVerifier  {
         Fp memory r0 = lmul(x.b, scalar_point); 
         return Fp2(r1, r0);
     }
-    /* function lmul(Fp2 memory x, Fp2 memory y) public view returns (Fp2 memory) { */
-    /*     Fp memory p1 = lmul(x.a, y.a); */
-    /*     Fp memory p0 = lmul(x.b, y.b); */
-    /*     return Fp2(p1, p0); */
-    /**/
-    /* } */
 
     function lmul(Fp memory x, Fp memory y) public view returns (Fp memory) {
         uint r0;
         uint r1;
         uint r2;
         uint carry;
-        Fp memory p; 
+        uint pa; 
+        uint pb; 
 
-        p = lmul(x.b, y.b);
+        (pa, pb) = Math.lmul(x.b, y.b);
 
-        r0 = p.b;
-        r1 = p.a;
+        r0 = pb;
+        r1 = pa;
 
-        p = lmul(x.a, y.b);
-        (r1, carry) = add(r1, p.b, carry);
-        (r2, carry) = add(0, p.a, carry);
+        (pa, pb) = Math.lmul(x.a, y.b);
+        (r1, carry) = Math.add(r1, pb, carry);
+        (r2, carry) = Math.add(0, pa, carry);
         require(carry == 0, "overflow");
 
-        p = lmul(x.b, y.a);
-        (r1, carry) = add(r1, p.b, carry);
-        (r2, carry) = add(r2, p.a, carry);
+        (pa, pb) = Math.lmul(x.b, y.a);
+        (r1, carry) = Math.add(r1, pb, carry);
+        (r2, carry) = Math.add(r2, pa, carry);
         require(carry == 0, "overflow");
 
-        p = lmul(x.a, y.a);
-        (r2, carry) = add(r2, p.b, carry);
+        (pa, pb) = Math.lmul(x.a, y.a);
+        (r2, carry) = Math.add(r2, pb, carry);
         require(carry == 0, "overflow");
-        require(p.a == 0, "overflow");
+        require(pa == 0, "overflow");
 
         Fp memory result = Fp(r1, r0);
         Fp memory base_field = get_base_field();
@@ -396,8 +303,8 @@ contract DepositVerifier  {
             length = 64;
             data = abi.encodePacked([r1, r0]);
         }
-        result = expmod(data, 1, length);
-        return lmod(result, base_field);
+        (r1, r0) = Math.expmod(data, 1, length);
+        return lmod(Fp(r1, r0), base_field);
     }
 
     function lsquare(Fp2 memory x) public view returns (Fp2 memory) {
@@ -412,70 +319,14 @@ contract DepositVerifier  {
         uint r1 = x.a;
         uint length = 32;
         uint r0 = x.b;
-        Fp memory result;
         bytes memory data;
+        data = abi.encodePacked([r0]);
         if (r1 > 0) {
             length = 64;
             data = abi.encodePacked([r1, r0]);
-            result = expmod(data, exp, length);
-            return result;
         }
-        data = abi.encodePacked([r0]);
-        result = expmod(data, exp, length);
-        return result;
-    }
-
-    function expmod(bytes memory data, uint exponent, uint length) private view returns (Fp memory) {
-        assert (length >= 0);
-        assert (length <= data.length);
-
-        bytes memory result = new bytes(48);
-
-        bool success;
-        assembly {
-            let p := mload(0x40)
-            // length of base
-            mstore(p, length)
-            // length of exponent
-            mstore(add(p, 0x20), 0x20)
-            // length of modulus
-            mstore(add(p, 0x40), 48)
-            // base
-            // first, copy slice by chunks of EVM words
-            let ctr := length
-            let src := add(add(data, 0x20), 0)
-            let dst := add(p, 0x60)
-            for { }
-                or(gt(ctr, 0x20), eq(ctr, 0x20))
-                { ctr := sub(ctr, 0x20) }
-            {
-                mstore(dst, mload(src))
-                dst := add(dst, 0x20)
-                src := add(src, 0x20)
-            }
-            // next, copy remaining bytes in last partial word
-            let mask := sub(exp(256, sub(0x20, ctr)), 1)
-            let srcpart := and(mload(src), not(mask))
-            let destpart := and(mload(dst), mask)
-            mstore(dst, or(destpart, srcpart))
-            // exponent
-            mstore(add(p, add(0x60, length)), exponent)
-            // modulus
-            let modulusAddr := add(p, add(0x60, add(0x10, length)))
-            mstore(modulusAddr, or(mload(modulusAddr), 0x1a0111ea397fe69a4b1ba7b6434bacd7)) // pt 1
-            mstore(add(p, add(0x90, length)), 0x64774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab) // pt 2
-            success := staticcall(
-                sub(gas(), 2000),
-                MOD_EXP_PRECOMPILE_ADDRESS,
-                p,
-                add(0xB0, length),
-                add(result, 0x20),
-                48)
-            // Use "invalid" to make gas estimation work
-            switch success case 0 { invalid() }
-        }
-        require(success, "call to modular exponentiation precompile failed");
-        return convertSliceToFpUnchecked(result);
+        (r1, r0) = Math.expmod(data, exp, length);
+        return Fp(r1, r0);
     }
 
     function get_base_field() public pure returns (Fp memory) {
@@ -500,7 +351,7 @@ contract DepositVerifier  {
         uint r0;
         uint r1;
         uint carry = 0;
-        (r1, carry) = lsub(x.a, y.a, carry);
+        (r1, carry) = Math.lsub(x.a, y.a, carry);
         // if overflowed then its lt
         if(carry != 0) {
             return false;
@@ -510,32 +361,19 @@ contract DepositVerifier  {
         }
         else if(r1 == 0) {
             carry = 0;
-            (r0, carry) = lsub(x.b, y.b, carry);
+            (r0, carry) = Math.lsub(x.b, y.b, carry);
             if(carry != 0) {
                 return false;
             }
         }
         return true;
     }
-    function bitLength(uint256 n) private pure returns (uint256) { unchecked {
-        uint256 m;
-
-        for (uint256 s = 128; s > 0; s >>= 1) {
-            if (n >= 1 << s) {
-                n >>= s;
-                m |= s;
-            }
-        }
-
-        return m + 1;
-    }}
-
     function bitLength(Fp memory p) public pure returns (uint256) { unchecked {
         if (p.a > 0) {
-            uint a_length = bitLength(p.a);
+            uint a_length = Math.bitLength(p.a);
             return a_length + 256;
         }
-        return bitLength(p.b);
+        return Math.bitLength(p.b);
         /* bitLength(p.b); */
     }}
 
@@ -593,8 +431,8 @@ contract DepositVerifier  {
         uint r0;
         uint r1;
         uint carry = 0;
-        (r0, carry) = lsub(x.b, y.b, carry);
-        (r1, carry) = lsub(x.a, y.a, carry);
+        (r0, carry) = Math.lsub(x.b, y.b, carry);
+        (r1, carry) = Math.lsub(x.a, y.a, carry);
         if(carry > 0) {
             Fp memory base_field = get_base_field();
             return lsub(base_field, Fp(0, carry));
@@ -606,31 +444,18 @@ contract DepositVerifier  {
         uint r0;
         uint r1;
         uint carry = 0;
-        (r0, carry) = lsub(x.b, y.b, carry);
-        (r1, carry) = lsub(x.a, y.a, carry);
+        (r0, carry) = Math.lsub(x.b, y.b, carry);
+        (r1, carry) = Math.lsub(x.a, y.a, carry);
         require(carry == 0, "underflow");
         return Fp(r1, r0);
-    }}
-
-    function lsub(uint256 x, uint256 y, uint256 carry) private pure returns (uint256, uint256) { unchecked {
-        if (x > 0)
-            return lsub(x - carry, y);
-        if (y < type(uint256).max)
-            return lsub(x, y + carry);
-        return (1 - carry, 1);
-    }}
-
-    function lsub(uint256 x, uint256 y) private pure returns (uint256, uint256) { unchecked {
-        uint256 z = x - y;
-        return (z, cast(z > x));
     }}
 
     function ladd(Fp memory x, Fp memory y) public view returns (Fp memory) { unchecked {
         uint r0;
         uint r1;
         uint carry;
-        (r0, carry) = add(x.b, y.b, carry);
-        (r1, carry) = add(x.a, y.a, carry);
+        (r0, carry) = Math.add(x.b, y.b, carry);
+        (r1, carry) = Math.add(x.a, y.a, carry);
         require(carry == 0, "overflow");
 
         Fp memory result = Fp(r1, r0);
@@ -643,19 +468,6 @@ contract DepositVerifier  {
         Fp memory a = ladd(x.a, y.a);
         Fp memory b = ladd(x.b, y.b);
         return Fp2(a, b);
-    }}
-
-    function add(uint256 x, uint256 y, uint256 carry) private pure returns (uint256, uint256) { unchecked {
-        if (x < type(uint256).max)
-            return add(x + carry, y);
-        if (y < type(uint256).max)
-            return add(x, y + carry);
-        return (type(uint256).max - 1 + carry, 1);
-    }}
-
-    function add(uint256 x, uint256 y) private pure returns (uint256, uint256) { unchecked {
-        uint256 z = x + y;
-        return (z, cast(z < x));
     }}
 
     function ldouble(Fp memory x) public view returns (Fp memory) {unchecked {
@@ -819,8 +631,8 @@ contract DepositVerifier  {
 
     function decodeG1Point(bytes memory encodedX, Fp memory Y) private pure returns (G1Point memory) {
         encodedX[0] = encodedX[0] & BLS_BYTE_WITHOUT_FLAGS_MASK;
-        uint a = sliceToUint(encodedX, 0, 16);
-        uint b = sliceToUint(encodedX, 16, 48);
+        uint a = Math.sliceToUint(encodedX, 0, 16);
+        uint b = Math.sliceToUint(encodedX, 16, 48);
         Fp memory X = Fp(a, b);
         return G1Point(X,Y);
     }
@@ -830,10 +642,10 @@ contract DepositVerifier  {
         // NOTE: the "flag bits" of the second half of `encodedX` are always == 0x0
 
         // NOTE: order is important here for decoding point...
-        uint aa = sliceToUint(encodedX, 48, 64);
-        uint ab = sliceToUint(encodedX, 64, 96);
-        uint ba = sliceToUint(encodedX, 0, 16);
-        uint bb = sliceToUint(encodedX, 16, 48);
+        uint aa = Math.sliceToUint(encodedX, 48, 64);
+        uint ab = Math.sliceToUint(encodedX, 64, 96);
+        uint ba = Math.sliceToUint(encodedX, 0, 16);
+        uint bb = Math.sliceToUint(encodedX, 16, 48);
         Fp2 memory X = Fp2(
             Fp(aa, ab),
             Fp(ba, bb)
@@ -855,8 +667,5 @@ contract DepositVerifier  {
     /**/
     /*     return blsPairingCheck(publicKey, messageOnCurve, signature); */
     /* } */
-    function cast(bool b) private pure returns (uint256 u) { unchecked {
-        assembly { u := b }
-    }}
 }
 

@@ -29,6 +29,10 @@ def _get_json(filename):
         return json.load(f)
 
 
+def get_math_lib_json():
+    filename = os.path.join(DIR, "../math.json")
+    return _get_json(filename)
+
 def get_proxy_contract_json():
     filename = os.path.join(DIR, "../deposit_verifier.json")
     return _get_json(filename)
@@ -60,6 +64,10 @@ def _deploy_contract(contract_json, w3, *args):
     )
     return contract_deployed
 
+# @pytest.fixture
+# def math_contract(w3):
+#     return _deploy_contract(get_math_lib_json(), w3)
+
 @pytest.fixture
 def deposit_domain():
     return compute_domain(DOMAIN_DEPOSIT)
@@ -72,6 +80,9 @@ def proxy_contract_deployer():
 
     return _deployer
 
+# @pytest.fixture
+# def proxy_contract(w3, math_contract, deposit_domain, proxy_contract_deployer):
+#     return proxy_contract_deployer(w3, math_contract.address, deposit_domain)
 
 @pytest.fixture
 def proxy_contract(w3, deposit_domain, proxy_contract_deployer):
