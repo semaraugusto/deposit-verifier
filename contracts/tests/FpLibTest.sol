@@ -30,13 +30,13 @@ contract FpLibTest  {
     function ladd(FpLib.Fp memory x, FpLib.Fp memory y) public view returns (FpLib.Fp memory) { unchecked {
         return FpLib.ladd(x, y);
     }}
-    function shl(FpLib.Fp memory x, uint256 n) public pure returns (FpLib.Fp memory) { unchecked {
+    function shl(FpLib.Fp memory x, uint256 n) public view returns (FpLib.Fp memory) { unchecked {
         return FpLib.shl(x, n);
     }}
     function bitLength(FpLib.Fp memory p) public pure returns (uint256) { unchecked {
         return FpLib.bitLength(p);
     }}
-    function lsubUnchecked(FpLib.Fp memory x, FpLib.Fp memory y) public pure returns (FpLib.Fp memory) { unchecked {
+    function lsubUnchecked(FpLib.Fp memory x, FpLib.Fp memory y) public view returns (FpLib.Fp memory) { unchecked {
         return FpLib.lsubUnchecked(x, y);
     }}
     function lsub(FpLib.Fp memory x, FpLib.Fp memory y) public pure returns (FpLib.Fp memory) { unchecked {

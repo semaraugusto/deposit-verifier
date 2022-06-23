@@ -44,6 +44,7 @@ contract DepositVerifier  {
         Fp2 Y;
         Fp2 Z;
     }
+    Fp2 ONE = Fp2(FpLib.Fp(0, 1), FpLib.Fp(0, 0));
     uint256 constant BLS_BASE_FIELD_B = 0x64774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab;
     uint256 constant BLS_BASE_FIELD_A = 0x1a0111ea397fe69a4b1ba7b6434bacd7;
     /* Fp constant BASE_FIELD = Fp(BLS_BASE_FIELD_A, BLS_BASE_FIELD_B); */
@@ -218,7 +219,12 @@ contract DepositVerifier  {
         return G2Point(
             Fp2(
                 FpLib.Fp(output[0], output[1]),
-                FpLib.Fp(output[2], output[3])), Fp2( FpLib.Fp(output[4], output[5]), FpLib.Fp(output[6], output[7]))
+                FpLib.Fp(output[2], output[3])
+            ), 
+            Fp2( 
+                FpLib.Fp(output[4], output[5]),
+                FpLib.Fp(output[6], output[7])
+            )
         );
     }
 
@@ -226,7 +232,27 @@ contract DepositVerifier  {
         return((x.a.a | x.a.b | x.b.a | x.b.b | y.a.a | y.a.b | y.b.a | y.b.b) == 0);
     }
 
+    function lmulTest(Fp2 memory x, Fp2 memory y) public view returns (Fp2 memory) {
+        Fp2 memory ONE = Fp2(FpLib.Fp(0, 1), FpLib.Fp(0, 0));
+        if (leq(x, ONE)) {
+            return y;
+        }
+        if (leq(y, ONE)) {
+            return x;
+        }
+        FpLib.Fp memory r1 = FpLib.lmulTest(x.a, y.a); 
+        FpLib.Fp memory r0 = FpLib.lmulTest(x.b, y.b); 
+        return Fp2(r1, r0);
+    }
     function lmul(Fp2 memory x, Fp2 memory y) public view returns (Fp2 memory) {
+        Fp2 memory ONE = Fp2(FpLib.Fp(0, 1), FpLib.Fp(0, 0));
+        return x;
+        if (leq(x, ONE)) {
+            return y;
+        }
+        if (leq(y, ONE)) {
+            return x;
+        }
         FpLib.Fp memory r1 = FpLib.lmul(x.a, y.a); 
         FpLib.Fp memory r0 = FpLib.lmul(x.b, y.b); 
         return Fp2(r1, r0);
@@ -248,7 +274,12 @@ contract DepositVerifier  {
         return FpLib.Fp(BLS_BASE_FIELD_A, BLS_BASE_FIELD_B);
     }
 
-    function lsub(Fp2 memory x, Fp2 memory y) public pure returns (Fp2 memory) { unchecked {
+    function ldiv(Fp2 memory x, Fp2 memory y) public view returns (Fp2 memory) { unchecked {
+        FpLib.Fp memory a = FpLib.ldiv(x.a, y.a);
+        FpLib.Fp memory b = FpLib.ldiv(x.b, y.b);
+        return Fp2(a, b);
+    }}
+    function lsub(Fp2 memory x, Fp2 memory y) public view returns (Fp2 memory) { unchecked {
         FpLib.Fp memory a = FpLib.lsubUnchecked(x.a, y.a);
         FpLib.Fp memory b = FpLib.lsubUnchecked(x.b, y.b);
         return Fp2(a, b);
@@ -260,7 +291,29 @@ contract DepositVerifier  {
         return Fp2(a, b);
     }}
 
-    // This function is being used for testing purposes. 
+    function leq(Fp2 memory x, Fp2 memory y) internal pure returns (bool) {
+        return(FpLib.leq(x.a, y.a) && FpLib.leq(x.b, y.b));
+        /* return(x.a == y.a && x.b == y.b); */
+    }
+    // TODO: Need to test this explicitly
+    function doubleG2(G2Point memory a) public view returns (G2PointTmp memory) {
+            Fp2 memory W = lmul(lmulTest(a.X, a.X), 3);
+            Fp2 memory S = lmulTest(a.Y, ONE);
+            Fp2 memory B = lmulTest(lmulTest(a.X, a.Y), S); 
+            Fp2 memory H = lsub(lmulTest(W, W), lmul(B, 8)); 
+            Fp2 memory S_sqr = lsquare(S); 
+            
+            Fp2 memory X = lmul(lmulTest(H, S), 2);
+            Fp2 memory Y_part1 = lmul(W, lsub(lmul(B, 4), H));
+            Fp2 memory Y_part2 = lmul(lmulTest(lsquare(a.Y), S_sqr), 8);
+            Fp2 memory Y = lsub(Y_part1, Y_part2);
+            Fp2 memory Z = lmul(lmulTest(S, S_sqr), 8);
+            X = ldiv(X, Z);
+            Y = ldiv(Y, Z);
+            return G2PointTmp(X, Y, Z);
+
+    }
+
     function addG2NoPrecompile(G2Point memory a, G2Point memory b) public view returns (G2PointTmp memory) {
         if(G2_isZeroNoPrecompile(a.X, a.Y)) { 
             G2PointTmp memory res = G2PointTmp(b.X, b.Y, Fp2(FpLib.Fp(0,0), FpLib.Fp(0,0)));
@@ -270,21 +323,71 @@ contract DepositVerifier  {
             G2PointTmp memory res = G2PointTmp(a.X, a.Y, Fp2(FpLib.Fp(0,0), FpLib.Fp(0,0)));
             return res;
         }
-        Fp2 memory X;
-        Fp2 memory Y;
-        Fp2 memory Z;
-        Fp2 memory H = lsub(b.X, a.X);
-        Fp2 memory HH = lsquare(H);
-        Fp2 memory I = lmul(HH, 4);
-        Fp2 memory J = lmul(H, I);
+        if(leq(a.X, b.X) && leq(a.Y, b.Y)) {
+
+        } else {
+            Fp2 memory ONE = Fp2(FpLib.Fp(0, 1), FpLib.Fp(0, 0));
+            Fp2 memory X;
+            Fp2 memory Y;
+            Fp2 memory Z;
+            Fp2 memory U1 = lmulTest(b.Y, ONE);
+            Fp2 memory U2 = lmulTest(a.Y, ONE);
+            Fp2 memory V1 = lmulTest(b.X, ONE);
+            Fp2 memory V2 = lmulTest(a.X, ONE);
+            if (leq(V1, V2) && leq(U1, U2)) {
+                return doubleG2(a);
+            } else if (leq(V1, V2)) {
+                return G2PointTmp(ONE, ONE, Fp2(FpLib.Fp(0,0), FpLib.Fp(0,0)));
+            }
+            Fp2 memory U = lsub(U1, U2);
+            Fp2 memory V = lsub(V1, V2);
+            Fp2 memory V_sqr = lsquare(V);
+
+
+            return G2PointTmp(U, V, V_sqr);
+
+        }
+    /* function addG2NoPrecompile(G2Point memory a, G2Point memory b) public view returns (G2PointTmp memory) { */
+    /*     if(G2_isZeroNoPrecompile(a.X, a.Y)) {  */
+    /*         G2PointTmp memory res = G2PointTmp(b.X, b.Y, Fp2(FpLib.Fp(0,0), FpLib.Fp(0,0))); */
+    /*         return res; */
+    /*     } */
+    /*     if (G2_isZeroNoPrecompile(b.X, b.Y)) {  */
+    /*         G2PointTmp memory res = G2PointTmp(a.X, a.Y, Fp2(FpLib.Fp(0,0), FpLib.Fp(0,0))); */
+    /*         return res; */
+    /*     } */
+    /*     if(leq(a.X, b.X) && leq(a.Y, b.Y)) { */
+    /**/
+    /*     } else { */
+    /*         Fp2 memory ONE = Fp2(FpLib.Fp(0, 1), FpLib.Fp(0, 0)); */
+    /*         Fp2 memory X; */
+    /*         Fp2 memory Y; */
+    /*         Fp2 memory Z; */
+    /*         Fp2 memory U1 = lmul(b.Y, ONE); */
+    /*         Fp2 memory U2 = lmul(b.Y, ONE); */
+    /*         Fp2 memory V1 = lmul(b.Y, ONE); */
+    /*         Fp2 memory V2 = lmul(b.Y, ONE); */
+    /**/
+    /*         return G2PointTmp(X, Y, Z); */
+    /**/
+    /*     } */
+        /* Fp2 memory X; */
+        /* Fp2 memory Y; */
+        /* Fp2 memory Z; */
+        /* Fp2 memory y_sub = lsub(b.Y, a.Y); */
+        /* Fp2 memory y_sub_sqr = lsquare(y_sub); */
+        /* Fp2 memory x_sub = lsub(b.X, a.X); */
+        /* Fp2 memory H = lsub(b.X, a.X); */
+        /* Fp2 memory HH = lsquare(H); */
+        /* Fp2 memory I = lmul(HH, 4); */
+        /* Fp2 memory J = lmul(H, I); */
         /* Fp2 memory sub_res = lsub(b.Y, a.Y); */
-        Fp2 memory r = lmul(lsub(b.Y, a.Y), 2);
-        Fp2 memory V = lmul(a.X, I);
-        X = lsub(lsub(lsquare(r), J), lmul(V, 2));
-        Y = lsub(lmul(r, lsub(V, X)), lmul(lmul(a.Y, H), J));
-        Z = lmul(H, 2);
-        
-        return G2PointTmp(X, Y, Z);
+        /* Fp2 memory r = lmul(lsub(b.Y, a.Y), 2); */
+        /* Fp2 memory V = lmul(a.X, I); */
+        /* X = lsub(lsub(lsquare(r), J), lmul(V, 2)); */
+        /* Y = lsub(lmul(r, lsub(V, X)), lmul(lmul(a.Y, H), J)); */
+        /* Z = lmul(H, 2); */
+        /* return G2PointTmp(X, Y, Z); */
     }
 
     function addG2(G2Point memory a, G2Point memory b) public view returns (G2Point memory) {
@@ -360,81 +463,81 @@ contract DepositVerifier  {
     }
 
     // NOTE: function is exposed for testing...
-    function blsPairingCheck(G1Point memory publicKey, G2Point memory messageOnCurve, G2Point memory signature) public view returns (bool) {
-        uint[24] memory input;
-
-        input[0] =  publicKey.X.a;
-        input[1] =  publicKey.X.b;
-        input[2] =  publicKey.Y.a;
-        input[3] =  publicKey.Y.b;
-
-        input[4] =  messageOnCurve.X.a.a;
-        input[5] =  messageOnCurve.X.a.b;
-        input[6] =  messageOnCurve.X.b.a;
-        input[7] =  messageOnCurve.X.b.b;
-        input[8] =  messageOnCurve.Y.a.a;
-        input[9] =  messageOnCurve.Y.a.b;
-        input[10] = messageOnCurve.Y.b.a;
-        input[11] = messageOnCurve.Y.b.b;
-
-        // NOTE: this constant is -P1, where P1 is the generator of the group G1.
-        input[12] = 31827880280837800241567138048534752271;
-        input[13] = 88385725958748408079899006800036250932223001591707578097800747617502997169851;
-        input[14] = 22997279242622214937712647648895181298;
-        input[15] = 46816884707101390882112958134453447585552332943769894357249934112654335001290;
-
-        input[16] =  signature.X.a.a;
-        input[17] =  signature.X.a.b;
-        input[18] =  signature.X.b.a;
-        input[19] =  signature.X.b.b;
-        input[20] =  signature.Y.a.a;
-        input[21] =  signature.Y.a.b;
-        input[22] =  signature.Y.b.a;
-        input[23] =  signature.Y.b.b;
-
-        uint[1] memory output;
-
-        bool success;
-        assembly {
-            success := staticcall(
-                sub(gas(), 2000),
-                BLS12_381_PAIRING_PRECOMPILE_ADDRESS,
-                input,
-                768,
-                output,
-                32
-            )
-            // Use "invalid" to make gas estimation work
-            switch success case 0 { invalid() }
-        }
-        require(success, "call to pairing precompile failed");
-
-        return output[0] == 1;
-    }
-
-    function decodeG1Point(bytes memory encodedX, FpLib.Fp memory Y) private pure returns (G1Point memory) {
-        encodedX[0] = encodedX[0] & BLS_BYTE_WITHOUT_FLAGS_MASK;
-        uint a = Math.sliceToUint(encodedX, 0, 16);
-        uint b = Math.sliceToUint(encodedX, 16, 48);
-        FpLib.Fp memory X = FpLib.Fp(a, b);
-        return G1Point(X,Y);
-    }
-
-    function decodeG2Point(bytes memory encodedX, Fp2 memory Y) private pure returns (G2Point memory) {
-        encodedX[0] = encodedX[0] & BLS_BYTE_WITHOUT_FLAGS_MASK;
-        // NOTE: the "flag bits" of the second half of `encodedX` are always == 0x0
-
-        // NOTE: order is important here for decoding point...
-        uint aa = Math.sliceToUint(encodedX, 48, 64);
-        uint ab = Math.sliceToUint(encodedX, 64, 96);
-        uint ba = Math.sliceToUint(encodedX, 0, 16);
-        uint bb = Math.sliceToUint(encodedX, 16, 48);
-        Fp2 memory X = Fp2(
-            FpLib.Fp(aa, ab),
-            FpLib.Fp(ba, bb)
-        );
-        return G2Point(X, Y);
-    }
+    /* function blsPairingCheck(G1Point memory publicKey, G2Point memory messageOnCurve, G2Point memory signature) public view returns (bool) { */
+    /*     uint[24] memory input; */
+    /**/
+    /*     input[0] =  publicKey.X.a; */
+    /*     input[1] =  publicKey.X.b; */
+    /*     input[2] =  publicKey.Y.a; */
+    /*     input[3] =  publicKey.Y.b; */
+    /**/
+    /*     input[4] =  messageOnCurve.X.a.a; */
+    /*     input[5] =  messageOnCurve.X.a.b; */
+    /*     input[6] =  messageOnCurve.X.b.a; */
+    /*     input[7] =  messageOnCurve.X.b.b; */
+    /*     input[8] =  messageOnCurve.Y.a.a; */
+    /*     input[9] =  messageOnCurve.Y.a.b; */
+    /*     input[10] = messageOnCurve.Y.b.a; */
+    /*     input[11] = messageOnCurve.Y.b.b; */
+    /**/
+    /*     // NOTE: this constant is -P1, where P1 is the generator of the group G1. */
+    /*     input[12] = 31827880280837800241567138048534752271; */
+    /*     input[13] = 88385725958748408079899006800036250932223001591707578097800747617502997169851; */
+    /*     input[14] = 22997279242622214937712647648895181298; */
+    /*     input[15] = 46816884707101390882112958134453447585552332943769894357249934112654335001290; */
+    /**/
+    /*     input[16] =  signature.X.a.a; */
+    /*     input[17] =  signature.X.a.b; */
+    /*     input[18] =  signature.X.b.a; */
+    /*     input[19] =  signature.X.b.b; */
+    /*     input[20] =  signature.Y.a.a; */
+    /*     input[21] =  signature.Y.a.b; */
+    /*     input[22] =  signature.Y.b.a; */
+    /*     input[23] =  signature.Y.b.b; */
+    /**/
+    /*     uint[1] memory output; */
+    /**/
+    /*     bool success; */
+    /*     assembly { */
+    /*         success := staticcall( */
+    /*             sub(gas(), 2000), */
+    /*             BLS12_381_PAIRING_PRECOMPILE_ADDRESS, */
+    /*             input, */
+    /*             768, */
+    /*             output, */
+    /*             32 */
+    /*         ) */
+    /*         // Use "invalid" to make gas estimation work */
+    /*         switch success case 0 { invalid() } */
+    /*     } */
+    /*     require(success, "call to pairing precompile failed"); */
+    /**/
+    /*     return output[0] == 1; */
+    /* } */
+    /**/
+    /* function decodeG1Point(bytes memory encodedX, FpLib.Fp memory Y) private pure returns (G1Point memory) { */
+    /*     encodedX[0] = encodedX[0] & BLS_BYTE_WITHOUT_FLAGS_MASK; */
+    /*     uint a = Math.sliceToUint(encodedX, 0, 16); */
+    /*     uint b = Math.sliceToUint(encodedX, 16, 48); */
+    /*     FpLib.Fp memory X = FpLib.Fp(a, b); */
+    /*     return G1Point(X,Y); */
+    /* } */
+    /**/
+    /* function decodeG2Point(bytes memory encodedX, Fp2 memory Y) private pure returns (G2Point memory) { */
+    /*     encodedX[0] = encodedX[0] & BLS_BYTE_WITHOUT_FLAGS_MASK; */
+    /*     // NOTE: the "flag bits" of the second half of `encodedX` are always == 0x0 */
+    /**/
+    /*     // NOTE: order is important here for decoding point... */
+    /*     uint aa = Math.sliceToUint(encodedX, 48, 64); */
+    /*     uint ab = Math.sliceToUint(encodedX, 64, 96); */
+    /*     uint ba = Math.sliceToUint(encodedX, 0, 16); */
+    /*     uint bb = Math.sliceToUint(encodedX, 16, 48); */
+    /*     Fp2 memory X = Fp2( */
+    /*         FpLib.Fp(aa, ab), */
+    /*         FpLib.Fp(ba, bb) */
+    /*     ); */
+    /*     return G2Point(X, Y); */
+    /* } */
 
     // NOTE: function is exposed for testing...
     /* function blsSignatureIsValid( */

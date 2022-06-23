@@ -58,6 +58,53 @@ library FpLib  {
 
         return (r2, r1, r0);
     }
+    function lmulTest(Fp memory x, Fp memory y) internal view returns (Fp memory) {
+        uint r0;
+        uint r1;
+        uint r2;
+        uint pb;
+        uint pa;
+        uint carry;
+        /* Fp memory p;  */
+
+        (pa, pb) = Math.lmul(x.b, y.b);
+
+        r0 = pb;
+        r1 = pa;
+
+        (pa, pb) = Math.lmul(x.a, y.b);
+        (r1, carry) = Math.add(r1, pb, carry);
+        (r2, carry) = Math.add(0, pa, carry);
+        require(carry == 0, "overflow");
+
+        (pa, pb) = Math.lmul(x.b, y.a);
+        (r1, carry) = Math.add(r1, pb, carry);
+        (r2, carry) = Math.add(r2, pa, carry);
+        require(carry == 0, "overflow");
+
+        (pa, pb) = Math.lmul(x.a, y.a);
+        (r2, carry) = Math.add(r2, pb, carry);
+        require(carry == 0, "overflow");
+        require(pa == 0, "overflow");
+
+        Fp memory result = Fp(r1, r0);
+        Fp memory base_field = get_base_field();
+        if(r2 == 0 && lgte(result, base_field)) {
+            return result;
+        }
+
+        uint length = 32;
+        bytes memory data = abi.encodePacked([r0]);
+        if(r2 > 0) {
+            length = 96;
+            data = abi.encodePacked([r2, r1, r0]);
+        } else {
+            length = 64;
+            data = abi.encodePacked([r1, r0]);
+        }
+        result = expmod(data, 1, length);
+        return lmod(result, base_field);
+    }
     function lmul(Fp memory x, Fp memory y) internal view returns (Fp memory) {
         uint r0;
         uint r1;
@@ -182,8 +229,12 @@ library FpLib  {
     function lmod(Fp memory x, Fp memory p) internal view returns (Fp memory) {
         if (lgte(x, p)) {
             Fp memory partial_res = ldiv(x, p);
-            partial_res = lmul(partial_res, p);
-            return lsub(x, partial_res);
+            uint r2;
+            uint r1;
+            uint r0;
+            (r2, r1, r0) = lmulUnchecked(partial_res, p);
+            require(r2 == 0, "overflow");
+            return lsub(x, Fp(r1, r0));
         } else {
             return x;
         }
@@ -253,17 +304,19 @@ library FpLib  {
         /* bitLength(p.b); */
     }}
 
-    function lsubUnchecked(FpLib.Fp memory x, FpLib.Fp memory y) internal pure returns (FpLib.Fp memory) { unchecked {
+    function lsubUnchecked(FpLib.Fp memory x, FpLib.Fp memory y) internal view returns (FpLib.Fp memory) { unchecked {
         uint r0;
         uint r1;
         uint carry = 0;
         (r0, carry) = Math.lsub(x.b, y.b, carry);
         (r1, carry) = Math.lsub(x.a, y.a, carry);
-        if(carry > 0) {
-            FpLib.Fp memory base_field = get_base_field();
-            return lsub(base_field, FpLib.Fp(0, carry));
-        }
-        return FpLib.Fp(r1, r0);
+        /* if(carry > 0) { */
+        /*     FpLib.Fp memory base_field = get_base_field(); */
+        /*     return lmod(Fp(r1, r0), base_field); */
+        /* } */
+        FpLib.Fp memory base_field = get_base_field();
+        return lmod(Fp(r1, r0), base_field);
+        /* return FpLib.Fp(r1, r0); */
     }}
     function lsub(Fp memory x, Fp memory y) internal pure returns (Fp memory) { unchecked {
         uint r0;

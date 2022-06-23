@@ -851,3 +851,28 @@ def test_ldiv_big(fplib_contract):
     print(f"expected: {expected}")
 
     assert expected == utils.convert_fp_to_int(actual)
+
+def test_shl_small(fplib_contract):
+    FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
+    fp_a, n = FQ(1), 10
+    expected = FQ(1 << n)
+    fp_a_repr = utils.convert_int_to_fp_repr(fp_a)
+    actual = fplib_contract.functions.shl(fp_a_repr, n).call()
+
+    print(f"actual: {utils.convert_fp_to_int(actual)}")
+    print(f"expected: {expected}")
+
+    assert expected == utils.convert_fp_to_int(actual)
+
+def test_shl_medium(fplib_contract):
+    FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
+    fp_a, n = FQ(UINT_MAX), 10
+    expected = FQ(UINT_MAX << n)
+    fp_a_repr = utils.convert_int_to_fp_repr(fp_a)
+    actual = fplib_contract.functions.shl(fp_a_repr, n).call()
+
+    print(f"actual: {utils.convert_fp_to_int(actual)}")
+    print(f"expected: {expected}")
+
+    assert expected == utils.convert_fp_to_int(actual)
+

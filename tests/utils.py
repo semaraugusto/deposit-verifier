@@ -11,6 +11,20 @@ from py_ecc.optimized_bls12_381 import FQ2, normalize
 #         int.from_bytes(b_bytes, byteorder="big"),
 #     )
 
+def convert_g2_to_tuple(g2_point):
+    g2_point_pyecc =[]
+    for tup in g2_point:
+        p = []
+        for f in tup:
+            p.append(FQ(convert_fp_to_int(f)))
+
+        p = FQ2(p)
+        g2_point_pyecc.append(p);
+    
+    g2_point_pyecc.append(FQ2.one());
+    g2_point_pyecc = tuple(g2_point_pyecc)
+    return g2_point_pyecc
+
 def convert_int_to_fp_repr(field_element):
     element_as_bytes = int(field_element).to_bytes(48, byteorder="big")
     a_bytes = element_as_bytes[:16]
