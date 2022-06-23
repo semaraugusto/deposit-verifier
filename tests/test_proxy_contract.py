@@ -85,7 +85,7 @@ def test_ladd_fq2(proxy_contract):
     expected = (FQ(3), FQ(3))
     fp_a_repr = utils.convert_int_to_fp2_repr(fp_a)
     fp_b_repr = utils.convert_int_to_fp2_repr(fp_b)
-    actual = proxy_contract.functions.ladd(fp_a_repr, fp_b_repr).call()
+    actual = proxy_contract.functions.ladd(fp_a_repr, fp_b_repr).call({'gas': 1000000000})
     actual = tuple(utils.convert_fp_to_int(fp2_repr) for fp2_repr in actual)
     print(f"actual: {utils.convert_fp_to_int(actual)}")
     print(f"expected: {expected}")
@@ -133,6 +133,8 @@ def test_lsub_0(proxy_contract, fplib_contract, signing_root):
     assert expected.coeffs[0] == actual
 
 def test_lsub_1(proxy_contract, fplib_contract, signing_root):
+    FQ.field_modulus = 0xfa0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
+    FIELD_MODULUS = FQ(0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab)
     points = proxy_contract.functions.signature_to_g2_points(signing_root).call()
     first_g2 = points[0]
     second_g2 = points[1]
@@ -164,20 +166,22 @@ def test_lsub_1(proxy_contract, fplib_contract, signing_root):
 
     _, x = u1.coeffs
     _, y = u2.coeffs
-    print(f"int_format: {y=}")
-    print(f"int_format: {y=}")
     x_repr = utils.convert_int_to_fp_repr(x)
     y_repr = utils.convert_int_to_fp_repr(y)
-    actual_repr = fplib_contract.functions.lsubUnchecked(x_repr, y_repr).call()
-    print(f"fp_format: {x_repr=}")
-    print(f"fp_format: {y_repr=}")
-    print(f"fp_format: {actual_repr=}")
-    actual = utils.convert_fp_to_int(actual_repr)
-    print(f"int_format: {actual=}")
-    print(f"{expected.coeffs[1]=}")
-    print(f"{utils.convert_int_to_fp_repr(expected.coeffs[1])=}")
+    actual_repr = fplib_contract.functions.lsub(x_repr, y_repr).call()
+    print(f"{x_repr = }")
+    print(f"{y_repr = }")
+    print(f"{actual_repr = }")
+    print(f"expected_repr{utils.convert_int_to_fp_repr(expected.coeffs[1]) = }")
+    actual = utils.convert_big_to_int(actual_repr)
+    print(f"{FIELD_MODULUS=}")
+    print(f"{x = }")
+    print(f"{y = }")
+    print(f"  {actual = }")
+    print(f"expected = {expected.coeffs[1]}")
     assert expected.coeffs[1] == actual
 
+# @pytest.mark.skip(reason="no way of currently testing this")
 def test_lsub(proxy_contract, fplib_contract, signing_root):
     points = proxy_contract.functions.signature_to_g2_points(signing_root).call()
     first_g2 = points[0]
@@ -222,7 +226,7 @@ def test_lsub(proxy_contract, fplib_contract, signing_root):
     print(f"{expected=}")
     assert expected == actual
 
-# @pytest.mark.skip(reason="no way of currently testing this")
+@pytest.mark.skip(reason="no way of currently testing this")
 def test_ladd_G2_1(proxy_contract, signing_root):
     FQ.field_modulus = 0xfa0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
     FIELD_MODULUS = FQ(0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab)

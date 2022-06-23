@@ -89,7 +89,7 @@ library FpLib  {
 
         Fp memory result = Fp(r1, r0);
         Fp memory base_field = get_base_field();
-        if(r2 == 0 && lgte(result, base_field)) {
+        if(r2 == 0 && gte(result, base_field)) {
             return result;
         }
 
@@ -136,7 +136,7 @@ library FpLib  {
 
         Fp memory result = Fp(r1, r0);
         Fp memory base_field = get_base_field();
-        if(r2 == 0 && lgte(result, base_field)) {
+        if(r2 == 0 && gte(result, base_field)) {
             return result;
         }
 
@@ -152,7 +152,7 @@ library FpLib  {
         result = expmod(data, 1, length);
         return lmod(result, base_field);
     }
-    function lgte(Fp memory x, Fp memory y) internal pure returns (bool) {
+    function gte(Fp memory x, Fp memory y) internal pure returns (bool) {
         uint r0;
         uint r1;
         uint carry = 0;
@@ -227,7 +227,7 @@ library FpLib  {
     }
 
     function lmod(Fp memory x, Fp memory p) internal view returns (Fp memory) {
-        if (lgte(x, p)) {
+        if (gte(x, p)) {
             Fp memory partial_res = ldiv(x, p);
             uint r2;
             uint r1;
@@ -257,7 +257,7 @@ library FpLib  {
             x = lsub(x, shl(y, shift));
             x_bit_length = bitLength(x);
         }
-        if (lgte(x, y)) {
+        if (gte(x, y)) {
             return ladd(p, one);
         }
 
@@ -304,29 +304,31 @@ library FpLib  {
         /* bitLength(p.b); */
     }}
 
-    function lsubUnchecked(FpLib.Fp memory x, FpLib.Fp memory y) internal view returns (FpLib.Fp memory) { unchecked {
+    function lsub(FpLib.Fp memory x, FpLib.Fp memory y) internal view returns (FpLib.Fp memory) { unchecked {
         uint r0;
         uint r1;
         uint carry = 0;
-        (r0, carry) = Math.lsub(x.b, y.b, carry);
-        (r1, carry) = Math.lsub(x.a, y.a, carry);
-        /* if(carry > 0) { */
-        /*     FpLib.Fp memory base_field = get_base_field(); */
-        /*     return lmod(Fp(r1, r0), base_field); */
-        /* } */
-        FpLib.Fp memory base_field = get_base_field();
-        return lmod(Fp(r1, r0), base_field);
-        /* return FpLib.Fp(r1, r0); */
+        if (gte(x, y)) {
+            (r0, carry) = Math.lsub(x.b, y.b, carry);
+            (r1, carry) = Math.lsub(x.a, y.a, carry);
+            require(carry == 0, "overflow");
+            return FpLib.Fp(r1, r0);
+        } else {
+            (r0, carry) = Math.lsub(y.b, x.b, carry);
+            (r1, carry) = Math.lsub(y.a, x.a, carry);
+            require(carry == 0, "overflow");
+            return lsub(get_base_field(), Fp(r1, r0));
+        }
     }}
-    function lsub(Fp memory x, Fp memory y) internal pure returns (Fp memory) { unchecked {
-        uint r0;
-        uint r1;
-        uint carry = 0;
-        (r0, carry) = Math.lsub(x.b, y.b, carry);
-        (r1, carry) = Math.lsub(x.a, y.a, carry);
-        require(carry == 0, "underflow");
-        return Fp(r1, r0);
-    }}
+    /* function lsub(Fp memory x, Fp memory y) internal pure returns (Fp memory) { unchecked { */
+    /*     uint r0; */
+    /*     uint r1; */
+    /*     uint carry = 0; */
+    /*     (r0, carry) = Math.lsub(x.b, y.b, carry); */
+    /*     (r1, carry) = Math.lsub(x.a, y.a, carry); */
+    /*     require(carry == 0, "underflow"); */
+    /*     return Fp(r1, r0); */
+    /* }} */
     function lsquare(Fp memory x) internal view returns (Fp memory) {
         return lpow(x, 2);
     }

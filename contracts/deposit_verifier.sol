@@ -2,7 +2,7 @@
 pragma solidity 0.8.14;
 pragma experimental ABIEncoderV2;
 
-import {Math} from "./libs/math.sol";
+/* import {Math} from "./libs/math.sol"; */
 import {FpLib} from "./libs/FpLib.sol";
 
 contract DepositVerifier  {
@@ -12,12 +12,8 @@ contract DepositVerifier  {
     uint constant WEI_PER_GWEI = 1e9;
     uint constant UINT_MAX = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
 
-    uint8 constant BLS12_381_PAIRING_PRECOMPILE_ADDRESS = 0x10;
-    uint8 constant BLS12_381_MAP_FIELD_TO_CURVE_PRECOMPILE_ADDRESS = 0x12;
-    uint8 constant BLS12_381_G2_ADD_ADDRESS = 0xD;
     string constant BLS_SIG_DST = "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_+";
-    bytes1 constant BLS_BYTE_WITHOUT_FLAGS_MASK = bytes1(0x1f);
-    uint8 constant MOD_EXP_PRECOMPILE_ADDRESS = 0x5;
+    /* bytes1 constant BLS_BYTE_WITHOUT_FLAGS_MASK = bytes1(0x1f); */
 
     // Fp is a field element with the high-order part stored in `a`.
 
@@ -47,6 +43,7 @@ contract DepositVerifier  {
     Fp2 ONE = Fp2(FpLib.Fp(0, 1), FpLib.Fp(0, 0));
     uint256 constant BLS_BASE_FIELD_B = 0x64774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab;
     uint256 constant BLS_BASE_FIELD_A = 0x1a0111ea397fe69a4b1ba7b6434bacd7;
+    FpLib.Fp BASE_FIELD = FpLib.Fp(BLS_BASE_FIELD_A, BLS_BASE_FIELD_B);
     /* Fp constant BASE_FIELD = Fp(BLS_BASE_FIELD_A, BLS_BASE_FIELD_B); */
     // uint constant BLS12_381_BASE_FIELD_MODULUS = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab;
 
@@ -169,7 +166,7 @@ contract DepositVerifier  {
         assembly {
             success := staticcall(
                 sub(gas(), 2000),
-                BLS12_381_MAP_FIELD_TO_CURVE_PRECOMPILE_ADDRESS,
+                0x12,
                 input,
                 128,
                 output,
@@ -205,7 +202,7 @@ contract DepositVerifier  {
         assembly {
             success := staticcall(
                 sub(gas(), 2000),
-                BLS12_381_MAP_FIELD_TO_CURVE_PRECOMPILE_ADDRESS,
+                0x12,
                 input,
                 128,
                 output,
@@ -265,14 +262,11 @@ contract DepositVerifier  {
     }
 
     function lsquare(Fp2 memory x) public view returns (Fp2 memory) {
-        FpLib.Fp memory p1 = FpLib.lsquare(x.a);
-        FpLib.Fp memory p2 = FpLib.lsquare(x.b);
+        FpLib.Fp memory p1 = FpLib.lmul(x.a, x.a);
+        FpLib.Fp memory p2 = FpLib.lmul(x.b, x.b);
         return Fp2(p1, p2);
     }
 
-    function get_base_field() public pure returns (FpLib.Fp memory) {
-        return FpLib.Fp(BLS_BASE_FIELD_A, BLS_BASE_FIELD_B);
-    }
 
     function ldiv(Fp2 memory x, Fp2 memory y) public view returns (Fp2 memory) { unchecked {
         FpLib.Fp memory a = FpLib.ldiv(x.a, y.a);
@@ -280,8 +274,8 @@ contract DepositVerifier  {
         return Fp2(a, b);
     }}
     function lsub(Fp2 memory x, Fp2 memory y) public view returns (Fp2 memory) { unchecked {
-        FpLib.Fp memory a = FpLib.lsubUnchecked(x.a, y.a);
-        FpLib.Fp memory b = FpLib.lsubUnchecked(x.b, y.b);
+        FpLib.Fp memory a = FpLib.lsub(x.a, y.a);
+        FpLib.Fp memory b = FpLib.lsub(x.b, y.b);
         return Fp2(a, b);
     }}
 
@@ -416,7 +410,7 @@ contract DepositVerifier  {
         assembly {
             success := staticcall(
                 sub(gas(), 2000),
-                BLS12_381_G2_ADD_ADDRESS,
+                0xD,
                 input,
                 512,
                 output,
@@ -501,7 +495,7 @@ contract DepositVerifier  {
     /*     assembly { */
     /*         success := staticcall( */
     /*             sub(gas(), 2000), */
-    /*             BLS12_381_PAIRING_PRECOMPILE_ADDRESS, */
+    /*             0x10, */
     /*             input, */
     /*             768, */
     /*             output, */

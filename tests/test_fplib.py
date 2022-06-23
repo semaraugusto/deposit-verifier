@@ -18,97 +18,97 @@ def test_base_field(fplib_contract):
     assert expected == utils.convert_fp_to_int(actual)
 
 
-def test_lgte_small_eq(fplib_contract):
+def test_gte_small_eq(fplib_contract):
     FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
     fp_a, fp_b = FQ(10), FQ(10)
     expected = 1
     fp_a_repr = utils.convert_int_to_fp_repr(fp_a)
     fp_b_repr = utils.convert_int_to_fp_repr(fp_b)
-    actual = fplib_contract.functions.lgte(fp_a_repr, fp_b_repr).call()
+    actual = fplib_contract.functions.gte(fp_a_repr, fp_b_repr).call()
 
     print(f"actual: {actual}")
     print(f"expected: {expected}")
     assert expected == actual
 
-def test_lgte_small_gt(fplib_contract):
+def test_gte_small_gt(fplib_contract):
     FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
     fp_a, fp_b = FQ(11), FQ(10)
     expected = 1
     fp_a_repr = utils.convert_int_to_fp_repr(fp_a)
     fp_b_repr = utils.convert_int_to_fp_repr(fp_b)
-    actual = fplib_contract.functions.lgte(fp_a_repr, fp_b_repr).call()
+    actual = fplib_contract.functions.gte(fp_a_repr, fp_b_repr).call()
 
     print(f"actual: {actual}")
     print(f"expected: {expected}")
     assert expected == actual
 
-def test_lgte_small_lt(fplib_contract):
+def test_gte_small_lt(fplib_contract):
     FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
     fp_a, fp_b = FQ(9), FQ(10)
     expected = 0
     fp_a_repr = utils.convert_int_to_fp_repr(fp_a)
     fp_b_repr = utils.convert_int_to_fp_repr(fp_b)
-    actual = fplib_contract.functions.lgte(fp_a_repr, fp_b_repr).call()
+    actual = fplib_contract.functions.gte(fp_a_repr, fp_b_repr).call()
 
     print(f"actual: {actual}")
     print(f"expected: {expected}")
     assert expected == actual
 
-def test_lgte_medium_eq(fplib_contract):
+def test_gte_medium_eq(fplib_contract):
     FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
     fp_a, fp_b = FQ(UINT_MAX + 1), FQ(UINT_MAX + 1)
     expected = 1
     fp_a_repr = utils.convert_int_to_fp_repr(fp_a)
     fp_b_repr = utils.convert_int_to_fp_repr(fp_b)
-    actual = fplib_contract.functions.lgte(fp_a_repr, fp_b_repr).call()
+    actual = fplib_contract.functions.gte(fp_a_repr, fp_b_repr).call()
 
     print(f"actual: {actual}")
     print(f"expected: {expected}")
     assert expected == actual
 
-def test_lgte_medium_gt(fplib_contract):
+def test_gte_medium_gt(fplib_contract):
     FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
     fp_a, fp_b = FQ(UINT_MAX + 2), FQ(UINT_MAX + 1)
     expected = 1
     fp_a_repr = utils.convert_int_to_fp_repr(fp_a)
     fp_b_repr = utils.convert_int_to_fp_repr(fp_b)
-    actual = fplib_contract.functions.lgte(fp_a_repr, fp_b_repr).call()
+    actual = fplib_contract.functions.gte(fp_a_repr, fp_b_repr).call()
 
     print(f"actual: {actual}")
     print(f"expected: {expected}")
     assert expected == actual
 
-def test_lgte_medium_lt(fplib_contract):
+def test_gte_medium_lt(fplib_contract):
     FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
     fp_a, fp_b = FQ(UINT_MAX + 1), FQ(UINT_MAX + 2)
     expected = 0
     fp_a_repr = utils.convert_int_to_fp_repr(fp_a)
     fp_b_repr = utils.convert_int_to_fp_repr(fp_b)
-    actual = fplib_contract.functions.lgte(fp_a_repr, fp_b_repr).call()
+    actual = fplib_contract.functions.gte(fp_a_repr, fp_b_repr).call()
 
     print(f"actual: {actual}")
     print(f"expected: {expected}")
     assert expected == actual
 
-def test_lgte_medium_gt_2(fplib_contract):
+def test_gte_medium_gt_2(fplib_contract):
     FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
     fp_a, fp_b = FQ(45442060874369865957053122457065728162598490762543039060009208264153100167950), FQ(UINT_MAX)
     expected = 0
     fp_a_repr = utils.convert_int_to_fp_repr(fp_a)
     fp_b_repr = utils.convert_int_to_fp_repr(fp_b)
-    actual = fplib_contract.functions.lgte(fp_a_repr, fp_b_repr).call()
+    actual = fplib_contract.functions.gte(fp_a_repr, fp_b_repr).call()
 
     print(f"actual: {actual}")
     print(f"expected: {expected}")
     assert expected == actual
 
-def test_lgte_medium_lt_1(fplib_contract):
+def test_gte_medium_lt_1(fplib_contract):
     FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
     fp_a, fp_b = FQ(UINT_MAX * 10), FQ(UINT_MAX*10 + 2)
     expected = 0
     fp_a_repr = utils.convert_int_to_fp_repr(fp_a)
     fp_b_repr = utils.convert_int_to_fp_repr(fp_b)
-    actual = fplib_contract.functions.lgte(fp_a_repr, fp_b_repr).call()
+    actual = fplib_contract.functions.gte(fp_a_repr, fp_b_repr).call()
 
     print(f"actual: {actual}")
     print(f"expected: {expected}")
@@ -373,6 +373,7 @@ def test_lsquare_big(fplib_contract):
 
     assert expected == utils.convert_fp_to_int(actual)
 
+# @pytest.mark.skip(reason="no way of currently testing this")
 def test_lsquare_big_2(fplib_contract):
     FQ.field_modulus = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
     fp = FQ(FQ.field_modulus - 10)
