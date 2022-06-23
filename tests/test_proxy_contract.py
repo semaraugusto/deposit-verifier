@@ -92,6 +92,7 @@ def test_ladd_fq2(proxy_contract):
 
     assert expected == actual
 
+@pytest.mark.skip(reason="no way of currently testing this")
 def test_lsub_0(proxy_contract, fplib_contract, signing_root):
     points = proxy_contract.functions.signature_to_g2_points(signing_root).call()
     first_g2 = points[0]
@@ -132,6 +133,7 @@ def test_lsub_0(proxy_contract, fplib_contract, signing_root):
     print(f"{expected=}")
     assert expected.coeffs[0] == actual
 
+@pytest.mark.skip(reason="no way of currently testing this")
 def test_lsub_1(proxy_contract, fplib_contract, signing_root):
     FQ.field_modulus = 0xfa0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
     FIELD_MODULUS = FQ(0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab)
@@ -181,7 +183,7 @@ def test_lsub_1(proxy_contract, fplib_contract, signing_root):
     print(f"expected = {expected.coeffs[1]}")
     assert expected.coeffs[1] == actual
 
-# @pytest.mark.skip(reason="no way of currently testing this")
+@pytest.mark.skip(reason="no way of currently testing this")
 def test_lsub(proxy_contract, fplib_contract, signing_root):
     points = proxy_contract.functions.signature_to_g2_points(signing_root).call()
     first_g2 = points[0]
@@ -226,7 +228,7 @@ def test_lsub(proxy_contract, fplib_contract, signing_root):
     print(f"{expected=}")
     assert expected == actual
 
-@pytest.mark.skip(reason="no way of currently testing this")
+# @pytest.mark.skip(reason="no way of currently testing this")
 def test_ladd_G2_1(proxy_contract, signing_root):
     FQ.field_modulus = 0xfa0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
     FIELD_MODULUS = FQ(0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab)
@@ -261,111 +263,23 @@ def test_ladd_G2_1(proxy_contract, signing_root):
     
     second_g2_pyecc.append(FQ2.one());
     second_g2_pyecc = tuple(second_g2_pyecc)
-    result, u1, u2 = addTest(first_g2_pyecc,second_g2_pyecc)
+    result, v, v_sqr = addTest(first_g2_pyecc,second_g2_pyecc)
     first_g2_pyecc = tuple(first_g2_pyecc)
-    # print(f"firstpyecc: {first_g2_pyecc}")
-    # print(f"firstpyecc0: {first_g2_pyecc[0]}")
-    # print(f"firstpyecc0: {first_g2_pyecc[1]}")
-    # print(f"secondpyecc: {second_g2_pyecc}")
-    # print(f"secondpyecc0: {second_g2_pyecc[0]}")
-    # print(f"secondpyecc0: {second_g2_pyecc[1]}")
-    # # first_g2_pyecc = Point2D(first_g2_pyecc)
-    # print(f"firstpyecc: {first_g2_pyecc}")
-    # print(f"second: {second_g2}")
-    # print(f"result: {result}")
-    # print(f"result: {result}")
-    # print(f"expected: {expected}")
     exp1 = proxy_contract.functions.addG2(first_g2, second_g2).call()
     actual1 = proxy_contract.functions.addG2NoPrecompile(first_g2, second_g2).call()
     exp = tuple(utils.convert_fp2_to_int(fp2_repr) for fp2_repr in exp1)
     actual = tuple(utils.convert_fp2_to_int(fp2_repr) for fp2_repr in actual1)
-    # print(f"expected: {result}")
-    # print(f"expected0: {result[0]}")
-    # print(f"expected1: {result[1]}")
-    # print(f"expected2: {result[2]}")
-    # print(f"first_g2: {utils.convert_fp2_to_int(first_g2[0])}")
-    # print(f"first_g2: {utils.convert_fp2_to_int(first_g2[1])}")
-    # print(f"actual: {actual}")
-    # print(f"actual1: {actual[1]}")
     print(f"modulus: {FIELD_MODULUS}")
-    print(f"HERE: {actual[0]}")
-    u = u1 - u2
-    print(f"U: {u}")
-    assert u == actual[0]
-    # print(f"actual2: {actual[2]}")
+    print(f"IN_V: {actual[1]}")
+    print(f"HERE: {actual[2]}")
+    print(f"v: {v}")
+    print(f"v_sqr: {v_sqr}")
+    assert v_sqr == actual[2]
     result = normalize(result)
     actual = normalize(actual)
-    # print(f"actual normalized: {actual}")
-    # print(f"actual0_normalized0: {actual[0]}")
-    # print(f"actual1_normalized1: {actual[1]}")
 
     assert exp == expected
     assert result == expected
-    assert actual == expected
-    # assert 1 == expected
-    # print(f"expected: {expected}")
-    # print(f"actual: {spec_result}")
-    # for i ,v in enumerate(first_g2):
-    #     print(f"first {i}: {v}")
-    # for i ,v in enumerate(second_g2):
-    #     print(f"second {i}: {v}")
-    # actual1 = proxy_contract.functions.addG2NoPrecompile(first_g2, second_g2).call()
-    # actual = tuple(utils.convert_fp2_to_int(fp2_repr) for fp2_repr in actual1)
-    # exp = tuple(utils.convert_fp2_to_int(fp2_repr) for fp2_repr in exp1)
-    # # field_modulus = utils.convert_fp_to_int(number)
-    #
-    # # print(f"actual: {actual}")
-    # print(f"field_modulus: {utils.convert_int_to_fp_repr(number)}")
-    # for i ,v in enumerate(actual1):
-    #     print(f"actual {i}: {v}")
-    # for i ,v in enumerate(actual1):
-    #     print(f"actual {i}: {v}")
-    # print(f"exp: {exp1}")
-    # print(f"expected: {expected1}")
-    # for i ,v in enumerate(expected1):
-    #     print(f"expected {i}: {v}")
-    # for i ,v in enumerate(exp1):
-    #     print(f"exp {i}: {v}")
-    # # for i ,v in enumerate(exp):
-    # # # for i ,t in enumerate(v):
-    #     # print(f"exp {i}: {utils.convert_big_to_fp_repr(v)}")
-    #
-    # pyeccexpected = add(first_g2, second_g2)
-    # for i ,v in enumerate(pyeccexpected):
-    #     print(f"exp {i}: {v}")
-    # assert exp == expected
-    # assert actual == expected
-
-@pytest.mark.skip(reason="no way of currently testing this")
-def test_ladd_G2_2(proxy_contract, signing_root):
-    FQ.field_modulus = 0xfa0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
-    # P = (FQ(0), FQ(
-   
-    P = (
-            (
-                (0, 27991211403065569603352684119971037214426037576469694245936883398668617891910), 
-                (0, 89072159627938937202492029662165821541518499041498457381942243177506233030727)
-            ),
-            (
-                (0, 87027392047270186994386093104410885039350191291509970203406052811367506663056),
-                (0, 43499303726590499707141535958176257445659542945154508867800912252439019330587)
-            )
-    )
-
-    actual1 = proxy_contract.functions.addG2NoPrecompile(first_g2, second_g2).call()
-    actual1 = proxy_contract.functions.addG2(first_g2, second_g2).call()
-    actual = tuple(utils.convert_fp2_to_int(fp2_repr) for fp2_repr in actual1)
-    # field_modulus = utils.convert_fp_to_int(number)
-
-    # print(f"actual: {actual}")
-    print(f"field_modulus: {utils.convert_int_to_fp_repr(number)}")
-    for i ,v in enumerate(actual1):
-        print(f"actual {i}: {v}")
-    for i ,v in enumerate(actual1):
-        print(f"actual {i}: {v}")
-    # print(f"expected: {expected}")
-    for i ,v in enumerate(expected1):
-        print(f"expected {i}: {v}")
     assert actual == expected
 
 def test_map_to_curve_matches_spec(proxy_contract, signing_root):
