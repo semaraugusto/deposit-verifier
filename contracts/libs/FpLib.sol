@@ -27,131 +27,174 @@ library FpLib  {
         return Fp(a, b);
     }
 
+    /* function lmulUnchecked(Fp memory x, Fp memory y) internal view returns (uint, uint, uint) { */
+    /*     uint r0; */
+    /*     uint r1; */
+    /*     uint r2; */
+    /*     uint pb; */
+    /*     uint pa; */
+    /*     uint carry; */
+    /**/
+    /*     (pa, pb) = Math.lmul(x.b, y.b); */
+    /**/
+    /*     r0 = pb; */
+    /*     r1 = pa; */
+    /**/
+    /*     (pa, pb) = Math.lmul(x.a, y.b); */
+    /*     (r1, carry) = Math.add(r1, pb, carry); */
+    /*     (r2, carry) = Math.add(0, pa, carry); */
+    /*     require(carry == 0, "overflow"); */
+    /**/
+    /*     (pa, pb) = Math.lmul(x.b, y.a); */
+    /*     (r1, carry) = Math.add(r1, pb, carry); */
+    /*     (r2, carry) = Math.add(r2, pa, carry); */
+    /*     require(carry == 0, "overflow"); */
+    /**/
+    /*     (pa, pb) = Math.lmul(x.a, y.a); */
+    /*     (r2, carry) = Math.add(r2, pb, carry); */
+    /*     require(carry == 0, "overflow"); */
+    /*     require(pa == 0, "overflow"); */
+    /**/
+    /*     return (r2, r1, r0); */
+    /* } */
+    function get_partial_muls(Fp memory x, Fp memory y) internal view returns (uint m11, uint m10, uint m21, uint m20, uint m31, uint m30, uint m41, uint m40) {
+        /* Fp memory p;  */
+
+        (m11, m10) = Math.lmul(x.b, y.b);
+        (m21, m20) = Math.lmul(x.a, y.b);
+        (m31, m30) = Math.lmul(x.b, y.a);
+        (m41, m40) = Math.lmul(x.a, y.a);
+        return (m11, m10, m21, m20, m31, m30, m41, m40);
+    }
+
     function lmulUnchecked(Fp memory x, Fp memory y) internal view returns (uint, uint, uint) {
         uint r0;
         uint r1;
         uint r2;
+        uint r3;
         uint pb;
         uint pa;
-        uint carry;
+        uint carry = 0;
         /* Fp memory p;  */
 
-        (pa, pb) = Math.lmul(x.b, y.b);
-
-        r0 = pb;
-        r1 = pa;
+        (r1, r0) = Math.lmul(x.b, y.b);
 
         (pa, pb) = Math.lmul(x.a, y.b);
         (r1, carry) = Math.add(r1, pb, carry);
-        (r2, carry) = Math.add(0, pa, carry);
-        require(carry == 0, "overflow");
+        (r2, carry) = Math.add(pa, carry);
+        require(carry==0, "overflow");
 
         (pa, pb) = Math.lmul(x.b, y.a);
         (r1, carry) = Math.add(r1, pb, carry);
         (r2, carry) = Math.add(r2, pa, carry);
-        require(carry == 0, "overflow");
+        require(carry==0, "overflow");
 
         (pa, pb) = Math.lmul(x.a, y.a);
         (r2, carry) = Math.add(r2, pb, carry);
-        require(carry == 0, "overflow");
-        require(pa == 0, "overflow");
+        /* (r2, carry) = Math.add(r2, pa, carry); */
+        require(pa==0, "overflow");
+        require(carry==0, "overflow");
+        r3 = r3 + carry;
+        require(r3 == 0, "overflow");
 
         return (r2, r1, r0);
-    }
-    function lmulTest(Fp memory x, Fp memory y) internal view returns (Fp memory) {
-        uint r0;
-        uint r1;
-        uint r2;
-        uint pb;
-        uint pa;
-        uint carry;
-        /* Fp memory p;  */
-
-        (pa, pb) = Math.lmul(x.b, y.b);
-
-        r0 = pb;
-        r1 = pa;
-
-        (pa, pb) = Math.lmul(x.a, y.b);
-        (r1, carry) = Math.add(r1, pb, carry);
-        (r2, carry) = Math.add(0, pa, carry);
-        require(carry == 0, "overflow");
-
-        (pa, pb) = Math.lmul(x.b, y.a);
-        (r1, carry) = Math.add(r1, pb, carry);
-        (r2, carry) = Math.add(r2, pa, carry);
-        require(carry == 0, "overflow");
-
-        (pa, pb) = Math.lmul(x.a, y.a);
-        (r2, carry) = Math.add(r2, pb, carry);
-        require(carry == 0, "overflow");
-        require(pa == 0, "overflow");
-
-        Fp memory result = Fp(r1, r0);
-        Fp memory base_field = get_base_field();
-        if(r2 == 0 && gte(result, base_field)) {
-            return result;
-        }
-
-        uint length = 32;
-        bytes memory data = abi.encodePacked([r0]);
-        if(r2 > 0) {
-            length = 96;
-            data = abi.encodePacked([r2, r1, r0]);
-        } else {
-            length = 64;
-            data = abi.encodePacked([r1, r0]);
-        }
-        result = expmod(data, 1, length);
-        return lmod(result, base_field);
     }
     function lmul(Fp memory x, Fp memory y) internal view returns (Fp memory) {
         uint r0;
         uint r1;
         uint r2;
+        uint r3;
         uint pb;
         uint pa;
-        uint carry;
+        uint carry = 0;
         /* Fp memory p;  */
 
-        (pa, pb) = Math.lmul(x.b, y.b);
-
-        r0 = pb;
-        r1 = pa;
+        (r1, r0) = Math.lmul(x.b, y.b);
 
         (pa, pb) = Math.lmul(x.a, y.b);
         (r1, carry) = Math.add(r1, pb, carry);
-        (r2, carry) = Math.add(0, pa, carry);
-        require(carry == 0, "overflow");
+        (r2, carry) = Math.add(pa, carry);
+        require(carry==0, "overflow");
 
         (pa, pb) = Math.lmul(x.b, y.a);
         (r1, carry) = Math.add(r1, pb, carry);
         (r2, carry) = Math.add(r2, pa, carry);
-        require(carry == 0, "overflow");
+        require(carry==0, "overflow");
 
         (pa, pb) = Math.lmul(x.a, y.a);
         (r2, carry) = Math.add(r2, pb, carry);
-        require(carry == 0, "overflow");
-        require(pa == 0, "overflow");
+        /* (r2, carry) = Math.add(r2, pa, carry); */
+        require(pa==0, "overflow");
+        require(carry==0, "overflow");
 
         Fp memory result = Fp(r1, r0);
         Fp memory base_field = get_base_field();
         if(r2 == 0 && gte(result, base_field)) {
             return result;
         }
-
+        bytes memory data;
         uint length = 32;
-        bytes memory data = abi.encodePacked([r0]);
-        if(r2 > 0) {
+        data = abi.encodePacked([r0]);
+        if (r2 > 0) {
             length = 96;
             data = abi.encodePacked([r2, r1, r0]);
-        } else {
+            /* result = expmod(data, 1, length); */
+            /* return result; */
+        } else if (r1 > 0) {
             length = 64;
             data = abi.encodePacked([r1, r0]);
+            /* result = expmod(data, 1, length); */
+            /* return result; */
         }
         result = expmod(data, 1, length);
-        return lmod(result, base_field);
+        return result;
     }
+    /* function lmul(Fp memory x, Fp memory y) internal view returns (Fp memory) { */
+    /*     uint r0; */
+    /*     uint r1; */
+    /*     uint r2; */
+    /*     uint pb; */
+    /*     uint pa; */
+    /*     uint carry; */
+    /**/
+    /*     (pa, pb) = Math.lmul(x.b, y.b); */
+    /**/
+    /*     r0 = pb; */
+    /*     r1 = pa; */
+    /**/
+    /*     (pa, pb) = Math.lmul(x.a, y.b); */
+    /*     (r1, carry) = Math.add(r1, pb, carry); */
+    /*     (r2, carry) = Math.add(0, pa, carry); */
+    /*     require(carry == 0, "overflow"); */
+    /**/
+    /*     (pa, pb) = Math.lmul(x.b, y.a); */
+    /*     (r1, carry) = Math.add(r1, pb, carry); */
+    /*     (r2, carry) = Math.add(r2, pa, carry); */
+    /*     require(carry == 0, "overflow"); */
+    /**/
+    /*     (pa, pb) = Math.lmul(x.a, y.a); */
+    /*     (r2, carry) = Math.add(r2, pb, carry); */
+    /*     require(carry == 0, "overflow"); */
+    /*     require(pa == 0, "overflow"); */
+    /**/
+    /*     Fp memory result = Fp(r1, r0); */
+    /*     Fp memory base_field = get_base_field(); */
+    /*     if(r2 == 0 && gte(result, base_field)) { */
+    /*         return result; */
+    /*     } */
+    /**/
+    /*     uint length = 32; */
+    /*     bytes memory data = abi.encodePacked([r0]); */
+    /*     if(r2 > 0) { */
+    /*         length = 96; */
+    /*         data = abi.encodePacked([r2, r1, r0]); */
+    /*     } else { */
+    /*         length = 64; */
+    /*         data = abi.encodePacked([r1, r0]); */
+    /*     } */
+    /*     result = expmod(data, 1, length); */
+    /*     return lmod(result, base_field); */
+    /* } */
     function gte(Fp memory x, Fp memory y) internal pure returns (bool) {
         uint r0;
         uint r1;
